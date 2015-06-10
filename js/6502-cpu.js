@@ -269,7 +269,7 @@
             },
             // $70 BVS REL
             112: function () {
-                if (reg[S] == 0) brchREL();
+                if (reg[V] == 0) brchREL();
                 else ++PC[0];
             },
             // $24 CLC IMP
@@ -286,7 +286,7 @@
             },
             // $B8 CLV IMP
             184: function () {
-                reg[value] = 0;
+                reg[V] = 0;
             },
             // $C9 CMP IM
             201: function () {
@@ -327,5 +327,5 @@
                 addr[0] = addrIDY();
                 CMP(RAM[addr[0]]);
             }
-        };
-}(window));
+        };     
+}(typeof window != 'undefined' ? window : typeof exports != undefined ? exports : {}));
