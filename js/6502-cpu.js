@@ -188,8 +188,8 @@
         },
         JSR = function (m) {
             tmp = PC[0] - 1;
-            pushStack(tmp/0xFF);
-            pushStack(tmp&0xFF);
+            pushStack(tmp/256|0);
+            pushStack(tmp&255|0);
             PC[0] = m;
         },
         LDA = function (m) {
