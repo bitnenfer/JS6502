@@ -3,9 +3,6 @@
  **     6502 JavaScript Emulator
  **     Author: Felipe Alfonso
  **
- **  Reference:
- **  http://homepage.ntlworld.com/cyborgsystems/CS_Main/6502/6502.htm
- **
  **/
 (function (scope) {
     'use strict';
