@@ -77,6 +77,15 @@
             addr[0] = eatByte();
             PC[0] = PC[0] + addr[0];
         },
+        pushStack = function (m) {
+            RAM[stackAddress + SP[0]] = m;
+            --SP[0];
+        },
+        popStack = function () {
+            ++SP[0];
+            tmp = RAM[stackAddress + SP[0]];
+            return tmp;
+        },
         // Instruction set.
         ADC = function (m) {
             tmp = reg[A] + m + reg[C];
@@ -138,6 +147,73 @@
             reg[Y] = reg[Y] - 1;
             reg[Z] = reg[Y] == 0 ? 1 : 0;
             reg[N] = getBit(reg[Y], 7);
+        },
+        EOR = function (m) {
+            reg[A] = reg[A] ^ m;
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        INC = function (m) {
+            tmp = (m + 1) & 0xFF;
+            reg[N] = getBit(tmp, 7);
+            reg[Z] = tmp == 0 ? 1 : 0;
+        },
+        INX = function () {
+            reg[X] = reg[X] + 1;
+            reg[Z] = reg[X] == 0 ?  1 : 0;
+            reg[N] = getBit(reg[X], 7);
+        },
+        INY = function () {
+            reg[Y] = reg[Y] + 1;
+            reg[Z] = reg[Y] == 0 ?  1 : 0;
+            reg[N] = getBit(reg[Y], 7);
+        },
+        JMP = function (m) {
+            PC[0] = m;  
+        },
+        JSR = function (m) {
+            
+        },
+        LDA = function (m) {
+            reg[A] = m;
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        LDX = function (m) {
+            reg[X] = m;
+            reg[N] = getBit(reg[X], 7);
+            reg[Z] = reg[X] == 0 ? 1 : 0;
+        },
+        LDY = function (m) {
+            reg[Y] = m;
+            reg[N] = getBit(reg[Y], 7);
+            reg[Z] = reg[Y] == 0 ? 1 : 0;  
+        },
+        LSR = function (m) {
+            reg[N] = 0;
+            reg[C] = getBit(m, 0);
+            tmp = (m >> 1) & 0x7F;
+            reg[Z] = tmp == 0 ? 1 : 0;
+            return tmp;
+        },
+        ORA = function (m) {
+            reg[A] = reg[A] | m;
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        PHA = function () {
+            pushStack(reg[A]);
+        },
+        PHP = function () {
+            
+        },
+        PLA = function () {
+          reg[A] = popStack();
+          reg[N] = getBit(reg[A], 7);
+          reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        PLP = function () {
+            
         },
         // Instruction addr
         INSTADDR = {
@@ -353,4 +429,12 @@
                 CMP(RAM[addr[0]]);
             }
         };     
+        // Expose some elements for communication
+        // between other modules.
+        scope.CPU6502 = {};
+        Object.defineProperty(scope.CPU6502, 'RAM', {
+           get: function () {
+               return RAM;
+           } 
+        });
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
