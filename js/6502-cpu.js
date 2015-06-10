@@ -111,6 +111,34 @@
             reg[C] = reg[A] >= m ? 1 : 0;
             reg[Z] = tmp == 0 ? 1 : 0;
         },
+        CPX = function (m) {
+            tmp = reg[X]  - m;
+            reg[N] = getBit(tmp, 7);
+            reg[C] = reg[X] >= m ? 1 : 0;
+            reg[Z] = tmp == 0 ? 1 : 0;
+        },
+        CPY = function (m) {
+            tmp = reg[Y]  - m;
+            reg[N] = getBit(tmp, 7);
+            reg[C] = reg[Y] >= m ? 1 : 0;
+            reg[Z] = tmp == 0 ? 1 : 0;
+        },
+        DEC = function (m) {
+            tmp = (m - 1) & 0xFF;
+            reg[N] = getBit(m, 7);
+            reg[Z] = m == 0 ? 1 : 0;
+            return tmp;
+        },
+        DEX = function () {
+            reg[X] = reg[X] - 1;
+            reg[Z] = reg[X] == 0 ? 1 : 0;
+            reg[N] = getBit(reg[X], 7);
+        },
+        DEY = function () {
+            reg[Y] = reg[Y] - 1;
+            reg[Z] = reg[Y] == 0 ? 1 : 0;
+            reg[N] = getBit(reg[Y], 7);
+        },
         // Instruction addr
         INSTADDR = {
             // $69 ADC IM
