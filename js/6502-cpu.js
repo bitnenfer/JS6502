@@ -1,8 +1,7 @@
 /**
  **
- **  6502 JavaScript Emulator
- **  Based(ish) on the Atari 800 Specs
- **  64K of RAM
+ **     6502 JavaScript Emulator
+ **     Author: Felipe Alfonso
  **
  **  Reference:
  **  http://homepage.ntlworld.com/cyborgsystems/CS_Main/6502/6502.htm
@@ -10,289 +9,323 @@
  **/
 (function (scope) {
     'use strict';
-    var ram, stack, gpr, sp, pc, status, ArrayToString, instrset, address, lsb,
-        msb, spAddress, zeroPageAddress, zeroPageXAddress, absoluteAddress,
-        absoluteXAddress, absoluteYAddress, indirectXAddress, indirectYAddress,
-        consumePCByte, indirectAddress, jumpRelative, getBit, a, b, c,
-        setN, setC, setZ, setI, setD, setV, setB, setReg, getReg, setFlag, getFlag,
-        // Registers
-        A, X, Y,
-        // Flags
-        N, V, B, D, I, Z, C,
-        // Instructions
-        iADC, iAND, iASL, iBIT, iCMP;
-    // CPU Setup
-    // 64KB of ram.
-    ram = new Uint8Array(65536);
-    // General purpose register.
-    // 0. Accumulator
-    // 1. X index register
-    // 2. Y index register
-    gpr = new Uint8Array(3);
-    // 8 bit stack pointer
-    sp = new Uint8Array(1);
-    // SP address. Page 1
-    spAddress = 0x01FF;
-    // 16 bit program counter
-    pc = new Uint16Array(1);
-    // 7. Carry flag
-    // 6. Zero flag
-    // 5. Interrupt flag
-    // 4. Decimal mode flag
-    // 3. Break flag
-    // 2. Not used
-    // 1. Overflow flag
-    // 0. Sign flag
-    status = new Uint8Array(8);
-    // 16 bit address
-    address = new Uint16Array(1);
-    A = 0;
-    X = 1;
-    Y = 2;
-    N = 0;
-    V = 1;
-    B = 3;
-    D = 4;
-    I = 5;
-    Z = 6;
-    C = 7;
-    setReg = function (regIdx, value) {
-        gpr[regIdx] = value;
-    };
-    getReg = function (regIdx) {
-        return gpr[regIdx];
-    };
-    setFlag = function (flgIdx, value) {
-        status[regIdx] = value;
-    };
-    getFlag = function (flgIdx) {
-        return status[regIdx];
-    };
-    // Helper
-    ArrayToString = function (arr, sep) {
-        var index,
-            length = arr.length,
-            str = '';
-        if (typeof sep == 'undefined') sep = '';
-        for (index = 0; index < length; ++index) {
-            str += arr[index];
-            if (index < length - 1) {
-                str += sep;
+    // Register Indexes
+    var A = 0,
+        X = 1,
+        Y = 2,
+        N = 3,
+        V = 4,
+        B = 6,
+        D = 7,
+        I = 8,
+        Z = 9,
+        C = 10,
+        // Register array
+        reg = new Uint8Array(11),
+        // Program counter
+        PC = new Uint16Array(1),
+        // Stack pointer
+        SP = new Uint8Array(1),
+        stackAddress = 0x01FF,
+        // 64KB of RAM
+        RAM = new Uint8Array(65536),
+        // Cached 16 bit addr
+        addr = new Uint16Array(1),
+        lsb,
+        msb,
+        tmp,
+        getBit = function (value, bit) {
+            return (value >> bit) & 1;
+        },
+        eatByte = function () {
+            return RAM[PC[0] ++];
+        },
+        // Address modes
+        // Zero Page
+        addrZP = function () {
+            return eatByte();
+        },
+        // Zero Page X
+        addrZPX = function () {
+            return addrZP() + reg[X];
+        },
+        // Zero Page Y
+        addrZPY = function () {
+            return addrZP() + reg[Y];
+        },
+        // Absolute
+        addrAB = function () {
+            lsb = eatByte();
+            msb = eatByte();
+            return (msb << 8) | (lsb & 0xff);
+        },
+        // Absolute X
+        addrABX = function () {
+            return addrAB() + reg[X];
+        },
+        // Absolute Y
+        addrABY = function () {
+            return addrAB() + reg[Y];
+        },
+        // Indirect X
+        addrIDX = function () {
+            return RAM[eatByte() + reg[X]];
+        },
+        // Indirect Y
+        addrIDY = function () {
+            return RAM[eatByte()] + reg[Y];
+        },
+        // Branch Relative
+        brchREL = function () {
+            addr[0] = eatByte();
+            PC[0] = PC[0] + addr[0];
+        },
+        // Instruction set.
+        ADC = function (m) {
+            tmp = reg[A] + m + reg[C];
+            reg[V] = getBit(reg[A], 7) != getBit(tmp, 7) ? 1 : 0;
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = tmp == 0 ? 1 : 0;
+            //TODO: Implement decimal mode operation.
+            reg[C] = tmp > 0xFF ? 1 : 0;
+            reg[A] = tmp;
+        },
+        AND = function (m) {
+            reg[A] &= m;
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        ASL = function (m) {
+            reg[C] = getBit(m, 7);
+            m = (m << 1) & 0xFE;
+            reg[N] = getBit(m);
+            reg[Z] = m == 0 ? 1 : 0;
+            return m;
+        },
+        BIT = function (m) {
+            tmp = reg[A] & m;
+            reg[N] = getBit(tmp, 7);
+            reg[V] = getBit(tmp, 6);
+            reg[Z] = tmp == 0 ? 1 : 0;
+        },
+        CMP = function (m) {
+            tmp = reg[A] - m;
+            reg[N] = getBit(tmp, 7);
+            reg[C] = reg[A] >= m ? 1 : 0;
+            reg[Z] = tmp == 0 ? 1 : 0;
+        },
+        // Instruction addr
+        INSTADDR = {
+            // $69 ADC IM
+            105: function () {
+                ADC(eatByte());
+            },
+            // $65 ADC ZP
+            101: function () {
+                addr[0] = addrZP();
+                ADC(RAM[addr[0]]);
+            },
+            // $75 ADC ZPX   
+            117: function () {
+                addr[0] = addrZPX();
+                ADC(RAM[addr[0]]);
+            },
+            // $6D ADC AB
+            109: function () {
+                addr[0] = addrAB();
+                ADC(RAM[addr[0]]);
+            },
+            // $7D ADC ABX
+            125: function () {
+                addr[0] = addrABX();
+                ADC(RAM[addr[0]]);
+            },
+            // $79 ADC ABY
+            121: function () {
+                addr[0] = addrABY();
+                ADC(RAM[addr[0]]);
+            },
+            // $61 ADC IDX
+            97: function () {
+                addr[0] = addrIDX();
+                ADC(RAM[addr[0]]);
+            },
+            // $71 ADC IDY
+            113: function () {
+                addr[0] = addrIDY();
+                ADC(RAM[addr[0]]);
+            },
+            // $29 AND IM
+            41: function () {
+                AND(eatByte());
+            },
+            // $25 AND ZP
+            37: function () {
+                addr[0] = addrZP();
+                AND(RAM[addr[0]]);
+            },
+            // $35 AND ZPX
+            53: function () {
+                addr[0] = addrZPX();
+                AND(RAM[addr[0]]);
+            },
+            // $2D AND AB
+            45: function () {
+                addr[0] = addrAB();
+                AND(RAM[addr[0]]);
+            },
+            // $3D AND ABX
+            61: function () {
+                addr[0] = addrABX();
+                AND(RAM[addr[0]]);
+            },
+            // $39 AND ABY
+            57: function () {
+                addr[0] = addrABY();
+                AND(RAM[addr[0]]);
+            },
+            // $21 AND IDX
+            33: function () {
+                addr[0] = addrIDX();
+                AND(RAM[addr[0]]);
+            },
+            // $31 AND IDY
+            49: function () {
+                addr[0] = addrIDY();
+                AND(RAM[addr[0]]);
+            },
+            // $0A ASL ACC
+            10: function () {
+                reg[A] = ASL(reg[A]);
+            },
+            // $06 ASL ZP
+            6: function () {
+                addr[0] = addrZP();
+                RAM[addr[0]] = ASL(RAM[addr[0]]);
+            },
+            // $16 ASL ZPX
+            22: function () {
+                addr[0] = addrZPX();
+                RAM[addr[0]] = ASL(RAM[addr[0]]);
+            },
+            // $0E ASL AB
+            14: function () {
+                addr[0] = addrAB();
+                RAM[addr[0]] = ASL(RAM[addr[0]]);
+            },
+            // $1E ASL ABX
+            30: function () {
+                addr[0] = addrABX();
+                RAM[addr[0]] = ASL(RAM[addr[0]]);
+            },
+            // $90 BCC REL
+            144: function () {
+                if (reg[C] == 0) brchREL();
+                else ++PC[0];
+            },
+            // $B0 BCS REL
+            176: function () {
+                if (reg[C] == 1) brchREL();
+                else ++PC[0];
+            },
+            // $F0 BEQ REL
+            240: function () {
+                if (reg[Z] == 1) brchREL();
+                else ++PC[0];
+            },
+            // $24 BIT ZP
+            36: function () {
+                addr[0] = addrZP();
+                BIT(RAM(addr[0]));
+            },
+            // $2C BIP AB
+            44: function () {
+                addr[0] = addrAB();
+                BIT(RAM(addr[0]));
+            },
+            // $30 BMI REL
+            48: function () {
+                if (reg[N] == 1) brchREL();
+                else ++PC[0];
+            },
+            // $D0 BNE REL
+            200: function () {
+                if (reg[Z] == 0) brchREL();
+                else ++PC[0];
+            },
+            // $10 BPL REL
+            16: function () {
+                if (reg[N] == 0) brchREL();
+                else ++PC[0];
+            },
+            // $00 BRK
+            0: function () {
+                reg[B] = 1;
+            },
+            // $50 BVC REL
+            80: function () {
+                if (reg[V] == 0) brchREL();
+                else ++PC[0];
+            },
+            // $70 BVS REL
+            112: function () {
+                if (reg[S] == 0) brchREL();
+                else ++PC[0];
+            },
+            // $24 CLC IMP
+            24: function () {
+                reg[C] = 0;
+            },
+            // $D8 CLD IMP
+            216: function () {
+                reg[D] = 0;
+            },
+            // $58 CLI IMP
+            88: function () {
+                reg[I] = 0;
+            },
+            // $B8 CLV IMP
+            184: function () {
+                reg[value] = 0;
+            },
+            // $C9 CMP IM
+            201: function () {
+                CMP(eatByte());
+            },
+            // $C5 CMP ZP
+            197: function () {
+                addr[0] = addrZP();
+                CMP(RAM[addr[0]]);
+            },
+            // $D5 CMP ZPX
+            213: function () {
+                addr[0] = addrZPX();
+                CMP(RAM[addr[0]]);
+            },
+            // $CD CMP AB
+            205: function () {
+                addr[0] = addrAB();
+                CMP(RAM[addr[0]]);
+            },
+            // $DD CMP ABX
+            221: function () {
+                addr[0] = addrABX();
+                CMP(RAM[addr[0]]);
+            },
+            // $D9 CMP ABY
+            217: function () {
+                addr[0] = addrABY();
+                CMP(RAM[addr[0]]);
+            },
+            // $C1 CMP IDX
+            193: function () {
+                addr[0] = addrIDX();
+                CMP(RAM[addr[0]]);
+            },
+            // $D1 CMP IDY
+            209: function () {
+                addr[0] = addrIDY();
+                CMP(RAM[addr[0]]);
             }
-        }
-        return str;
-    };
-    zeroPageAddress = function () {
-        return consumePCByte();
-    };
-    zeroPageXAddress = function () {
-        return zeroPageAddress() + gpr[1];
-    };
-    absoluteAddress = function () {
-        lsb = consumePCByte();
-        msb = consumePCByte();
-        return (msb << 8) | (lsb & 0xff);
-    };
-    absoluteXAddress = function () {
-        return absoluteAddress() + gpr[1];
-    };
-    absoluteYAddress = function () {
-        return absoluteAddress() + gpr[2];
-    };
-    indirectXAddress = function () {
-        return ram[consumePCByte() + gpr[1]];
-    };
-    indirectYAddress = function () {
-        return ram[consumePCByte()] + gpr[2];
-    };
-    consumePCByte = function () {
-        return ram[++pc[0]];
-    };
-    indirectAddress = function () {
-
-    };
-    jumpRelative = function () {
-        address[0] = consumePCByte();
-        pc[0] += address[0];
-    };
-    getBit = function (value, bit) {
-        return (value >> bit) & 1
-    };
-    iADC = function (m) {
-        a = gpr[0] + m + status[7];
-        setFlag(V, getBit(getReg(A), 7) != getBit(a, 7) ? 1 : 0);
-        setFlag(N, getBit(getReg(A), 7));
-        setFlag(Z, a == 0 ? 1 : 0);
-        //TODO: Implement decimal mode operation.
-        setFlag(C, a > 0xFF ? 1 : 0);
-        setReg(A, a);
-    };
-    iAND = function (m) {
-        gpr[0] &= m;
-        setReg(A, getReg(A) & m);
-        setFlag(N, getBit(getReg(A), 7));
-        setFlag(Z, getReg(A) == 0 ? 1 : 0);
-    };
-    iASL = function (m) {
-
-    };
-    iBIT = function (m) {
-        a = gpr[0] & m;
-        setFlag(N, getBit(a, 7));
-        setFlag(V, getBit(a, 6));
-        setFlag(Z, a == 0 ? 1 : 0);
-    };
-    iCMP = function (m) {
-        a = gpr[0] - m;
-        setFlag(N, getBit(a, 7));
-        setFlag(C, gpr[0] >= m ? 1 : 0);
-        setFlag(C, a == 0 ? 1 : 0);
-    };
-    // Address modes for each instruction.
-    scope.ADDRMODE = {
-        // $00 BRK
-        0: function () {
-            status[3] = 1;
-        },
-        // $69 ADC I        ADC #$44
-        105: function () {
-            iADC(consumePCByte());
-        },
-        // $65 ADC ZP       ADC $44
-        101: function () {
-            address[0] = zeroPageAddress();
-            iADC(ram[address[0]]);
-        },
-        // $75 ADC ZP, X    ADC $44, X   
-        117: function () {
-            address[0] = zeroPageXAddress();
-            iADC(ram[address[0]]);
-        },
-        // $6D ADC ABS      ADC $4400
-        109: function () {
-            address[0] = absoluteAddress();
-            iADC(ram[address[0]]);
-        },
-        // $7D ADC ABS, X   ADC $4400, X
-        125: function () {
-            address[0] = absoluteXAddress();
-            iADC(ram[address[0]]);
-        },
-        // $79 ADC ABS, Y   ADC $4400, Y
-        121: function () {
-            address[0] = absoluteYAddress();
-            iADC(ram[address[0]]);
-        },
-        // $61 ADC IND, X   ADC ($44, X)
-        97: function () {
-            address[0] = indirectXAddress();
-            iADC(ram[address[0]]);
-        },
-        // $71 ADC IND, Y   ADC ($44), Y
-        113: function () {
-            address[0] = indirectYAddress();
-            iADC(ram[address[0]]);
-        },
-        // $29 AND IM       AND #$44
-        41: function () {
-            iAND(consumePCByte());
-        },
-        // $25 AND ZP       AND $44
-        37: function () {
-            address[0] = zeroPageAddress();
-            iAND(ram[address[0]]);
-        },
-        // $35 AND ZP, X    AND $44, X
-        53: function () {
-            address[0] = zeroPageXAddress();
-            iAND(ram[address[0]]);
-        },
-        // $2D AND ABS      AND $4400
-        45: function () {
-            address[0] = absoluteAddress();
-            iAND(ram[address[0]]);
-        },
-        // $3D AND ABS, X   AND $4400, X
-        61: function () {
-            address[0] = absoluteXAddress();
-            iAND(ram[address[0]]);
-        },
-        // $39 AND ABS, Y   AND $4400, Y
-        57: function () {
-            address[0] = absoluteYAddress();
-            iAND(ram[address[0]]);
-        },
-        // $21 AND IND, X   AND ($44, X)
-        33: function () {
-            address[0] = indirectXAddress();
-            iAND(ram[address[0]]);
-        },
-        // $31 AND IND, Y   AND ($44), Y
-        49: function () {
-            address[0] = indirectYAddress();
-            iAND(ram[address[0]]);
-        },
-        // $90 BCC REL      BCC label
-        144: {
-            if (status[7] == 0) {
-                jumpRelative();
-            }
-        },
-        // $B0 BCS REL      BCS label
-        176: {
-            if (status[7] == 1) {
-                jumpRelative();
-            }
-        }
-    };
-    // Global container of
-    // CPU info.
-    scope.cpu6502 = {};
-    // Return values by copy.
-    // This is only for reading values
-    // in console.
-    Object.defineProperties(
-        scope.cpu6502, {
-            RAM: {
-                get: function () {
-                    return new Uint8Array(ram);
-                }
-            },
-            STACK: {
-                get: function () {
-                    return new Uint8Array(stack);
-                }
-            },
-            STATUS: {
-                get: function () {
-                    return ArrayToString(status);
-                }
-            },
-            A: {
-                get: function () {
-                    return gpr[0];
-                }
-            },
-            X: {
-                get: function () {
-                    return gpr[1];
-                }
-            },
-            Y: {
-                get: function () {
-                    return gpr[2];
-                }
-            },
-            SP: {
-                get: function () {
-                    return sp[0];
-                }
-            },
-            PC: {
-                get: function () {
-                    return pc[0];
-                }
-            }
-        }
-    );
+        };
 }(window));
