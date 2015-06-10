@@ -328,4 +328,4 @@
                 CMP(RAM[addr[0]]);
             }
         };     
-}(typeof window != 'undefined' ? window : typeof 'exports' != undefined ? exports : {}));
+}(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
