@@ -37,6 +37,21 @@
         eatByte = function () {
             return RAM[PC[0] ++];
         },
+        statusToByte = function () {
+            var byte = 0,
+                index;
+            for (index = 0; index < 8; ++index) {
+                byte *= 2;
+                byte = byte + reg[N + index];
+            }
+            return byte;
+        },
+        byteToStatus = function (m) {
+            var index;
+            for (index = 0; index < 8; ++index) {
+                reg[N + (7 - index)] = m & (1 << index) ? 1 : 0;
+            }
+        },
         // Address modes
         // Zero Page
         addrZP = function () {
@@ -172,7 +187,10 @@
             PC[0] = m;  
         },
         JSR = function (m) {
-            
+            tmp = PC[0] - 1;
+            pushStack(tmp/0xFF);
+            pushStack(tmp&0xFF);
+            PC[0] = m;
         },
         LDA = function (m) {
             reg[A] = m;
@@ -205,15 +223,15 @@
             pushStack(reg[A]);
         },
         PHP = function () {
-            
+            pushStack(statusToByte());
         },
         PLA = function () {
-          reg[A] = popStack();
-          reg[N] = getBit(reg[A], 7);
-          reg[Z] = reg[A] == 0 ? 1 : 0;
+            reg[A] = popStack();
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
         },
         PLP = function () {
-            
+            byteToStatus(popStack());   
         },
         // Instruction addr
         INSTADDR = {
