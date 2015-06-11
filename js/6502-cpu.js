@@ -79,6 +79,9 @@
         addrABY = function () {
             return addrAB() + reg[Y];
         },
+        addrID = function () {
+            return RAM[eatByte()];
+        },
         // Indirect X
         addrIDX = function () {
             return RAM[eatByte() + reg[X]];
@@ -172,6 +175,7 @@
             tmp = (m + 1) & 0xFF;
             reg[N] = getBit(tmp, 7);
             reg[Z] = tmp == 0 ? 1 : 0;
+            return tmp;
         },
         INX = function () {
             reg[X] = reg[X] + 1;
@@ -233,223 +237,530 @@
         PLP = function () {
             byteToStatus(popStack());   
         },
+        ROL = function (m) {
+            tmp = getBit(m, 7);
+            m = (m << 1) & 0xFE;
+            m = m | reg[C];
+            reg[C] = tmp;
+            reg[Z] = (m == 0) ? 1 : 0;
+            reg[N] = getBit(m, 7);
+            return m;
+        },
+        ROR = function (m) {
+            tmp = getBit(m, 0);
+            m = (m >> 1) & 0x7F;
+            m = m | reg[C] ? 0x80 : 0x00;
+            reg[C] = tmp;
+            reg[Z] = m == 0 ? 1 : 0;
+            reg[N] = getBit(m, 7);
+            return m;
+        },
+        RTI = function () {
+            byteToStatus(popStack());
+            tmp = popStack();
+            PC[0] = popStack() << 8 | tmp;
+        },
+        RTS = function () {
+            tmp = popStack();
+            PC[0] = (popStack() << 8 | tmp) + 1;
+        },
+        SBC = function (m) {
+            //TODO: Implement Decimal mode.
+            tmp = reg[A] - m - (reg[C] == 0 ? 1 : 0);
+            reg[V] = tmp > 127 || tmp < -128 ? 1 : 0;
+            reg[C] = tmp >= 0 ? 1 : 0;
+            reg[N] = getBit(tmp, 7);
+            reg[Z] = tmp == 0 ? 1 : 0;
+            reg[A] = tmp & 0xFF;
+        },
+        SEC = function () {
+            reg[C] = 1;
+        },
+        SED = function () {
+            reg[D] = 1;
+        },
+        SEI = function () {
+            reg[I] = 1;
+        },
+        STA = function (m) {
+            RAM[m] = reg[A];
+        },
+        STX = function (m) {
+            RAM[m] = reg[X];
+        },
+        STY = function (m) {
+            RAM[m] = reg[Y];
+        },
+        TAX = function () {
+            reg[X] = reg[A];
+            reg[N] = getBit(reg[X], 7);
+            reg[Z] = reg[X] == 0 ? 1 : 0;
+        },
+        TAY = function () {
+            reg[Y] = reg[A];
+            reg[N] = getBit(reg[Y], 7);
+            reg[Z] = reg[Y] == 0 ? 1 : 0;
+        },
+        TSX = function () {
+            reg[X] = SP[0];
+            reg[N] = getBit(reg[X], 7);
+            reg[Z] = reg[X] == 0 ? 1 : 0;
+        },
+        TXA = function () {
+            reg[A] = reg[X];
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
+        TXS = function () {
+            SP[0] = reg[X];
+        },
+        TYA = function () {
+            reg[A] = reg[Y];
+            reg[N] = getBit(reg[A], 7);
+            reg[Z] = reg[A] == 0 ? 1 : 0;
+        },
         // Instruction addr
         INSTADDR = {
-            // $69 ADC IM
-            105: function () {
+            // ADC IM
+            0x69: function () {
                 ADC(eatByte());
             },
-            // $65 ADC ZP
-            101: function () {
+            // ADC ZP
+            0x65: function () {
                 addr[0] = addrZP();
                 ADC(RAM[addr[0]]);
             },
-            // $75 ADC ZPX   
-            117: function () {
+            // ADC ZPX   
+            0x75: function () {
                 addr[0] = addrZPX();
                 ADC(RAM[addr[0]]);
             },
-            // $6D ADC AB
-            109: function () {
+            // ADC AB
+            0x6D: function () {
                 addr[0] = addrAB();
                 ADC(RAM[addr[0]]);
             },
-            // $7D ADC ABX
-            125: function () {
+            // ADC ABX
+            0x7D: function () {
                 addr[0] = addrABX();
                 ADC(RAM[addr[0]]);
             },
-            // $79 ADC ABY
-            121: function () {
+            // ADC ABY
+            0x79: function () {
                 addr[0] = addrABY();
                 ADC(RAM[addr[0]]);
             },
-            // $61 ADC IDX
-            97: function () {
+            // ADC IDX
+            0x61: function () {
                 addr[0] = addrIDX();
                 ADC(RAM[addr[0]]);
             },
-            // $71 ADC IDY
-            113: function () {
+            // ADC IDY
+            0x71: function () {
                 addr[0] = addrIDY();
                 ADC(RAM[addr[0]]);
             },
-            // $29 AND IM
-            41: function () {
+            // AND IM
+            0x29: function () {
                 AND(eatByte());
             },
-            // $25 AND ZP
-            37: function () {
+            // AND ZP
+            0x25: function () {
                 addr[0] = addrZP();
                 AND(RAM[addr[0]]);
             },
-            // $35 AND ZPX
-            53: function () {
+            // AND ZPX
+            0x35: function () {
                 addr[0] = addrZPX();
                 AND(RAM[addr[0]]);
             },
-            // $2D AND AB
-            45: function () {
+            // AND AB
+            0x2D: function () {
                 addr[0] = addrAB();
                 AND(RAM[addr[0]]);
             },
-            // $3D AND ABX
-            61: function () {
+            // AND ABX
+            0x3D: function () {
                 addr[0] = addrABX();
                 AND(RAM[addr[0]]);
             },
-            // $39 AND ABY
-            57: function () {
+            // AND ABY
+            0x39: function () {
                 addr[0] = addrABY();
                 AND(RAM[addr[0]]);
             },
-            // $21 AND IDX
-            33: function () {
+            // AND IDX
+            0x21: function () {
                 addr[0] = addrIDX();
                 AND(RAM[addr[0]]);
             },
-            // $31 AND IDY
-            49: function () {
+            // AND IDY
+            0x31: function () {
                 addr[0] = addrIDY();
                 AND(RAM[addr[0]]);
             },
-            // $0A ASL ACC
-            10: function () {
+            // ASL ACC
+            0x10: function () {
                 reg[A] = ASL(reg[A]);
             },
-            // $06 ASL ZP
-            6: function () {
+            // ASL ZP
+            0x06: function () {
                 addr[0] = addrZP();
                 RAM[addr[0]] = ASL(RAM[addr[0]]);
             },
-            // $16 ASL ZPX
-            22: function () {
+            // ASL ZPX
+            0x16: function () {
                 addr[0] = addrZPX();
                 RAM[addr[0]] = ASL(RAM[addr[0]]);
             },
-            // $0E ASL AB
-            14: function () {
+            // ASL AB
+            0x0E: function () {
                 addr[0] = addrAB();
                 RAM[addr[0]] = ASL(RAM[addr[0]]);
             },
-            // $1E ASL ABX
-            30: function () {
+            // ASL ABX
+            0x1E: function () {
                 addr[0] = addrABX();
                 RAM[addr[0]] = ASL(RAM[addr[0]]);
             },
-            // $90 BCC REL
-            144: function () {
+            // BCC REL
+            0x90: function () {
                 if (reg[C] == 0) brchREL();
                 else ++PC[0];
             },
-            // $B0 BCS REL
-            176: function () {
+            // BCS REL
+            0xB0: function () {
                 if (reg[C] == 1) brchREL();
                 else ++PC[0];
             },
-            // $F0 BEQ REL
-            240: function () {
+            // BEQ REL
+            0xF0: function () {
                 if (reg[Z] == 1) brchREL();
                 else ++PC[0];
             },
-            // $24 BIT ZP
-            36: function () {
+            // BIT ZP
+            0x24: function () {
                 addr[0] = addrZP();
                 BIT(RAM(addr[0]));
             },
-            // $2C BIP AB
-            44: function () {
+            // BIP AB
+            0x2C: function () {
                 addr[0] = addrAB();
                 BIT(RAM(addr[0]));
             },
-            // $30 BMI REL
-            48: function () {
+            // BMI REL
+            0x30: function () {
                 if (reg[N] == 1) brchREL();
                 else ++PC[0];
             },
-            // $D0 BNE REL
-            200: function () {
+            // BNE REL
+            0xD0: function () {
                 if (reg[Z] == 0) brchREL();
                 else ++PC[0];
             },
-            // $10 BPL REL
-            16: function () {
+            // BPL REL
+            0x10: function () {
                 if (reg[N] == 0) brchREL();
                 else ++PC[0];
             },
-            // $00 BRK
-            0: function () {
+            // BRK
+            0x00: function () {
                 reg[B] = 1;
             },
-            // $50 BVC REL
-            80: function () {
+            // BVC REL
+            0x50: function () {
                 if (reg[V] == 0) brchREL();
                 else ++PC[0];
             },
-            // $70 BVS REL
-            112: function () {
+            // BVS REL
+            0x70: function () {
                 if (reg[V] == 0) brchREL();
                 else ++PC[0];
             },
-            // $24 CLC IMP
-            24: function () {
+            // CLC IMP
+            0x24: function () {
                 reg[C] = 0;
             },
-            // $D8 CLD IMP
-            216: function () {
+            // CLD IMP
+            0xD8: function () {
                 reg[D] = 0;
             },
-            // $58 CLI IMP
-            88: function () {
+            // CLI IMP
+            0x58: function () {
                 reg[I] = 0;
             },
-            // $B8 CLV IMP
-            184: function () {
+            // CLV IMP
+            0xB8: function () {
                 reg[V] = 0;
             },
-            // $C9 CMP IM
-            201: function () {
+            // CMP IM
+            0xC9: function () {
                 CMP(eatByte());
             },
-            // $C5 CMP ZP
-            197: function () {
+            // CMP ZP
+            0xC5: function () {
                 addr[0] = addrZP();
                 CMP(RAM[addr[0]]);
             },
-            // $D5 CMP ZPX
-            213: function () {
+            // CMP ZPX
+            0xD5: function () {
                 addr[0] = addrZPX();
                 CMP(RAM[addr[0]]);
             },
-            // $CD CMP AB
-            205: function () {
+            // CMP AB
+            0xCD: function () {
                 addr[0] = addrAB();
                 CMP(RAM[addr[0]]);
             },
-            // $DD CMP ABX
-            221: function () {
+            // CMP ABX
+            0xDD: function () {
                 addr[0] = addrABX();
                 CMP(RAM[addr[0]]);
             },
-            // $D9 CMP ABY
-            217: function () {
+            // CMP ABY
+            0xD9: function () {
                 addr[0] = addrABY();
                 CMP(RAM[addr[0]]);
             },
-            // $C1 CMP IDX
-            193: function () {
+            // CMP IDX
+            0xC1: function () {
                 addr[0] = addrIDX();
                 CMP(RAM[addr[0]]);
             },
-            // $D1 CMP IDY
-            209: function () {
+            // CMP IDY
+            0xD1: function () {
                 addr[0] = addrIDY();
                 CMP(RAM[addr[0]]);
+            },
+            // CPX IM
+            0xE0: function () {
+                CPX(eatByte());
+            },
+            // CPX ZP
+            0xE4: function () {
+                addr[0] = addrZP();
+                CPX(RAM[addr[0]]);
+            },
+            // CPX AB
+            0xEC: function () {
+                addr[0] = addrAB();
+                CPX(RAM[addr[0]]);
+            },
+            // CPY IM
+            0xC0: function () {
+                CPY(eatByte());
+            },
+            // CPY ZP
+            0xC4: function () {
+                addr[0] = addrZP();
+                CPY(RAM[addr[0]]);
+            },
+            // CPY AB
+            0xCC: function () {
+                addr[0] = addrAB();
+                CPY(RAM[addr[0]]);
+            },
+            // DEC ZP
+            0xC6: function () {
+                addr[0] = addrZP();
+                DEC(RAM[addr[0]]);
+            },
+            // DEC ZPX
+            0xD6: function () {
+                addr[0] = addrZPX();
+                DEC(RAM[addr[0]]);
+            },
+            // DEC AB
+            0xCE: function () {
+                addr[0] = addrAB();
+                DEC(RAM[addr[0]]);
+            },
+            // DEC ABX
+            0xDE: function () {
+                addr[0] = addrABX();
+                DEC(RAM[addr[0]]);
+            },
+            // DEX
+            0xCA: function () {
+                DEX();
+            },
+            // DEY
+            0x88: function () {
+                DEY();
+            },
+            // EOR IM
+            0x49: function () {
+                EOR(eatByte());
+            },
+            // EOR ZP
+            0x45: function () {
+                addr[0] = addrZP();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR ZPX
+            0x55: function () {
+                addr[0] = addrZPX();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR AB
+            0x4D: function () {
+                addr[0] = addrAB();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR ABX
+            0x5D: function () {
+                addr[0] = addrABX();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR ABY
+            0x59: function () {
+                addr[0] = addrABY();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR IDX
+            0x41: function () {
+                addr[0] = addrIDX();
+                EOR(RAM[addr[0]]);
+            },
+            // EOR IDY
+            0x51: function () {
+                addr[0] = addrIDY();
+                EOR(addr[0]);
+            },
+            // INC ZP
+            0xE6: function () {
+                addr[0] = addrZP();
+                RAM[addr[0]] = INC(RAM[addr[0]]);
+            },
+            // INC ZPX
+            0xF6: function () {
+                addr[0] = addrZPX();
+                RAM[addr[0]] = INC(RAM[addr[0]]);
+            },
+            // INC AB
+            0xEE: function () {
+                addr[0] = addrAB();
+                RAM[addr[0]] = INC(RAM[addr[0]]);
+            },
+            // INC ABX
+            0xFE: function () {
+                addr[0] = addrABX();
+                RAM[addr[0]] = INC(RAM[addr[0]]);
+            },
+            // INX
+            0xE8: function () {
+                INX();
+            },
+            // INY
+            0xC8: function () {
+                INY();
+            },
+            // JMP AB
+            0x4C: function() {
+                addr[0] = addrAB();
+                JMP(addr[0]);
+            },
+            // JMP ID
+            0x6C: function () {
+                addr[0] = addrID();
+                JMP(RAM[addr[0]]);
+            },
+            // JSR AB
+            0x20: function () {
+                addr[0] = addrAB();
+                JSR(addr[0]);
+            },
+            // LDA IM
+            0xA9: function () {
+                LDA(eatByte());
+            },
+            // LDA ZP
+            0xA5: function () {
+                addr[0] = addrZP();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA ZPX
+            0xB5: function () {
+                addr[0] = addrZPX();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA AB
+            0xAD: function () {
+                addr[0] = addrAB();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA ABX
+            0xBD: function () {
+                addr[0] = addrABX();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA ABY
+            0xB9: function () {
+                addr[0] = addrABY();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA IDX
+            0xA1: function () {
+                addr[0] = addrIDX();
+                LDA(RAM[addr[0]]);
+            },
+            // LDA IDY
+            0xB1: function () {
+                addr[0] = addrIDY();
+                LDA(RAM[addr[0]]);
+            },
+            // LDX IM
+            0xA2: function () {
+                LDX(eatByte());
+            },
+            // LDX ZP
+            0xA6: function () {
+                addr[0] = addrZP();
+                LDX(RAM[addr[0]]);
+            },
+            // LDX ZPY
+            0xB6: function () {
+                addr[0] = addrZPY();
+                LDX(RAM[addr[0]]);
+            },
+            // LDX AB
+            0xAE: function () {
+                addr[0] = addrAB();
+                LDX(RAM[addr[0]]);
+            },
+            // LDX ABY
+            0xBE: function () {
+                addr[0] = addrABY();
+                LDX(RAM[addr[0]]);
+            },
+            // LDY IM
+            0xA0: function () {
+                LDY(eatByte());
+            },
+            // LDY ZP
+            0xA4: function () {
+                addr[0] = addrZP();
+                LDY(RAM[addr[0]]);
+            },
+            // LDY ZPX
+            0xB4: function () {
+                addr[0] = addrZPX();
+                LDY(RAM[addr[0]]);
+            },
+            // LDY AB
+            0xAC: function () {
+                addr[0] = addrAB();
+                LDY(RAM[addr[0]]);
+            },
+            // LDY ABX
+            0xBC: function () {
+                addr[0] = addrABX();
+                LDY(RAM[addr[0]]);
             }
         };     
         // Expose some elements for communication
         // between other modules.
-        scope.CPU6502 = {};
+        scope.CPU6502 = {INSTADDR: INSTADDR};
         Object.defineProperty(scope.CPU6502, 'RAM', {
            get: function () {
                return RAM;
