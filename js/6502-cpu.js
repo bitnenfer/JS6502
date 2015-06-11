@@ -5,7 +5,6 @@
  **
  **/
 (function (scope) {
-    'use strict';
     // Register Indexes
     var A = 0,
         X = 1,
@@ -35,7 +34,7 @@
             return (value >> bit) & 1;
         },
         eatByte = function () {
-            return RAM[PC[0] ++];
+            return RAM[PC[0]++];
         },
         statusToByte = function () {
             var byte = 0,
@@ -55,45 +54,47 @@
         // Address modes
         // Zero Page
         addrZP = function () {
-            return eatByte();
+            addr[0] = eatByte();
         },
         // Zero Page X
         addrZPX = function () {
-            return addrZP() + reg[X];
+            addr[0] = addrZP() + reg[X];
         },
         // Zero Page Y
         addrZPY = function () {
-            return addrZP() + reg[Y];
+            addr[0] = addrZP() + reg[Y];
         },
         // Absolute
         addrAB = function () {
             lsb = eatByte();
             msb = eatByte();
-            return (msb << 8) | (lsb & 0xff);
+            addr[0] = (msb << 8) | (lsb & 0xff);
         },
         // Absolute X
         addrABX = function () {
-            return addrAB() + reg[X];
+            addr[0] = addrAB() + reg[X];
         },
         // Absolute Y
         addrABY = function () {
-            return addrAB() + reg[Y];
+            addr[0] = addrAB() + reg[Y];
         },
         addrID = function () {
-            return RAM[eatByte()];
+            addr[0] = RAM[eatByte()];
         },
         // Indirect X
         addrIDX = function () {
-            return RAM[eatByte() + reg[X]];
+            addr[0] = RAM[eatByte() + reg[X]];
         },
         // Indirect Y
         addrIDY = function () {
-            return RAM[eatByte()] + reg[Y];
+            addr[0] = RAM[eatByte()] + reg[Y];
         },
         // Branch Relative
         brchREL = function () {
-            addr[0] = eatByte();
-            PC[0] = PC[0] + addr[0];
+            var l = PC[0]&255|0,
+                h = PC[0]/256|0,
+                b = eatByte() & 0xFF;
+            PC[0] = (((h << 8 | l) + b) & 0xFF) + 1;
         },
         pushStack = function (m) {
             RAM[stackAddress + SP[0]] = m;
@@ -103,6 +104,9 @@
             ++SP[0];
             tmp = RAM[stackAddress + SP[0]];
             return tmp;
+        },
+        peek = function () {
+            return RAM[addr[0]];
         },
         // Instruction set.
         ADC = function (m) {
@@ -282,14 +286,14 @@
         SEI = function () {
             reg[I] = 1;
         },
-        STA = function (m) {
-            RAM[m] = reg[A];
+        STA = function () {
+            RAM[addr[0]] = reg[A];
         },
-        STX = function (m) {
-            RAM[m] = reg[X];
+        STX = function () {
+            RAM[addr[0]] = reg[X];
         },
-        STY = function (m) {
-            RAM[m] = reg[Y];
+        STY = function () {
+            RAM[addr[0]] = reg[Y];
         },
         TAX = function () {
             reg[X] = reg[A];
@@ -327,38 +331,38 @@
             },
             // ADC ZP
             0x65: function () {
-                addr[0] = addrZP();
-                ADC(RAM[addr[0]]);
+                addrZP();
+                ADC(mem.peek);
             },
             // ADC ZPX   
             0x75: function () {
-                addr[0] = addrZPX();
-                ADC(RAM[addr[0]]);
+                addrZPX();
+                ADC(mem.peek);
             },
             // ADC AB
             0x6D: function () {
-                addr[0] = addrAB();
-                ADC(RAM[addr[0]]);
+                addrAB();
+                ADC(mem.peek);
             },
             // ADC ABX
             0x7D: function () {
-                addr[0] = addrABX();
-                ADC(RAM[addr[0]]);
+                addrABX();
+                ADC(mem.peek);
             },
             // ADC ABY
             0x79: function () {
-                addr[0] = addrABY();
-                ADC(RAM[addr[0]]);
+                addrABY();
+                ADC(mem.peek);
             },
             // ADC IDX
             0x61: function () {
-                addr[0] = addrIDX();
-                ADC(RAM[addr[0]]);
+                addrIDX();
+                ADC(mem.peek);
             },
             // ADC IDY
             0x71: function () {
-                addr[0] = addrIDY();
-                ADC(RAM[addr[0]]);
+                addrIDY();
+                ADC(mem.peek);
             },
             // AND IM
             0x29: function () {
@@ -366,38 +370,38 @@
             },
             // AND ZP
             0x25: function () {
-                addr[0] = addrZP();
-                AND(RAM[addr[0]]);
+                addrZP();
+                AND(mem.peek);
             },
             // AND ZPX
             0x35: function () {
-                addr[0] = addrZPX();
-                AND(RAM[addr[0]]);
+                addrZPX();
+                AND(mem.peek);
             },
             // AND AB
             0x2D: function () {
-                addr[0] = addrAB();
-                AND(RAM[addr[0]]);
+                addrAB();
+                AND(mem.peek);
             },
             // AND ABX
             0x3D: function () {
-                addr[0] = addrABX();
-                AND(RAM[addr[0]]);
+                addrABX();
+                AND(mem.peek);
             },
             // AND ABY
             0x39: function () {
-                addr[0] = addrABY();
-                AND(RAM[addr[0]]);
+                addrABY();
+                AND(mem.peek);
             },
             // AND IDX
             0x21: function () {
-                addr[0] = addrIDX();
-                AND(RAM[addr[0]]);
+                addrIDX();
+                AND(mem.peek);
             },
             // AND IDY
             0x31: function () {
-                addr[0] = addrIDY();
-                AND(RAM[addr[0]]);
+                addrIDY();
+                AND(mem.peek);
             },
             // ASL ACC
             0x10: function () {
@@ -405,23 +409,23 @@
             },
             // ASL ZP
             0x06: function () {
-                addr[0] = addrZP();
-                RAM[addr[0]] = ASL(RAM[addr[0]]);
+                addrZP();
+                mem.poke = ASL(mem.peek);
             },
             // ASL ZPX
             0x16: function () {
-                addr[0] = addrZPX();
-                RAM[addr[0]] = ASL(RAM[addr[0]]);
+                addrZPX();
+                mem.poke = ASL(mem.peek);
             },
             // ASL AB
             0x0E: function () {
-                addr[0] = addrAB();
-                RAM[addr[0]] = ASL(RAM[addr[0]]);
+                addrAB();
+                mem.poke = ASL(mem.peek);
             },
             // ASL ABX
             0x1E: function () {
-                addr[0] = addrABX();
-                RAM[addr[0]] = ASL(RAM[addr[0]]);
+                addrABX();
+                mem.poke = ASL(mem.peek);
             },
             // BCC REL
             0x90: function () {
@@ -440,12 +444,12 @@
             },
             // BIT ZP
             0x24: function () {
-                addr[0] = addrZP();
+                addrZP();
                 BIT(RAM(addr[0]));
             },
             // BIP AB
             0x2C: function () {
-                addr[0] = addrAB();
+                addrAB();
                 BIT(RAM(addr[0]));
             },
             // BMI REL
@@ -499,38 +503,38 @@
             },
             // CMP ZP
             0xC5: function () {
-                addr[0] = addrZP();
-                CMP(RAM[addr[0]]);
+                addrZP();
+                CMP(mem.peek);
             },
             // CMP ZPX
             0xD5: function () {
-                addr[0] = addrZPX();
-                CMP(RAM[addr[0]]);
+                addrZPX();
+                CMP(mem.peek);
             },
             // CMP AB
             0xCD: function () {
-                addr[0] = addrAB();
-                CMP(RAM[addr[0]]);
+                addrAB();
+                CMP(mem.peek);
             },
             // CMP ABX
             0xDD: function () {
-                addr[0] = addrABX();
-                CMP(RAM[addr[0]]);
+                addrABX();
+                CMP(mem.peek);
             },
             // CMP ABY
             0xD9: function () {
-                addr[0] = addrABY();
-                CMP(RAM[addr[0]]);
+                addrABY();
+                CMP(mem.peek);
             },
             // CMP IDX
             0xC1: function () {
-                addr[0] = addrIDX();
-                CMP(RAM[addr[0]]);
+                addrIDX();
+                CMP(mem.peek);
             },
             // CMP IDY
             0xD1: function () {
-                addr[0] = addrIDY();
-                CMP(RAM[addr[0]]);
+                addrIDY();
+                CMP(mem.peek);
             },
             // CPX IM
             0xE0: function () {
@@ -538,13 +542,13 @@
             },
             // CPX ZP
             0xE4: function () {
-                addr[0] = addrZP();
-                CPX(RAM[addr[0]]);
+                addrZP();
+                CPX(mem.peek);
             },
             // CPX AB
             0xEC: function () {
-                addr[0] = addrAB();
-                CPX(RAM[addr[0]]);
+                addrAB();
+                CPX(mem.peek);
             },
             // CPY IM
             0xC0: function () {
@@ -552,33 +556,33 @@
             },
             // CPY ZP
             0xC4: function () {
-                addr[0] = addrZP();
-                CPY(RAM[addr[0]]);
+                addrZP();
+                CPY(mem.peek);
             },
             // CPY AB
             0xCC: function () {
-                addr[0] = addrAB();
-                CPY(RAM[addr[0]]);
+                addrAB();
+                CPY(mem.peek);
             },
             // DEC ZP
             0xC6: function () {
-                addr[0] = addrZP();
-                DEC(RAM[addr[0]]);
+                addrZP();
+                DEC(mem.peek);
             },
             // DEC ZPX
             0xD6: function () {
-                addr[0] = addrZPX();
-                DEC(RAM[addr[0]]);
+                addrZPX();
+                DEC(mem.peek);
             },
             // DEC AB
             0xCE: function () {
-                addr[0] = addrAB();
-                DEC(RAM[addr[0]]);
+                addrAB();
+                DEC(mem.peek);
             },
             // DEC ABX
             0xDE: function () {
-                addr[0] = addrABX();
-                DEC(RAM[addr[0]]);
+                addrABX();
+                DEC(mem.peek);
             },
             // DEX
             0xCA: function () {
@@ -594,58 +598,58 @@
             },
             // EOR ZP
             0x45: function () {
-                addr[0] = addrZP();
-                EOR(RAM[addr[0]]);
+                addrZP();
+                EOR(mem.peek);
             },
             // EOR ZPX
             0x55: function () {
-                addr[0] = addrZPX();
-                EOR(RAM[addr[0]]);
+                addrZPX();
+                EOR(mem.peek);
             },
             // EOR AB
             0x4D: function () {
-                addr[0] = addrAB();
-                EOR(RAM[addr[0]]);
+                addrAB();
+                EOR(mem.peek);
             },
             // EOR ABX
             0x5D: function () {
-                addr[0] = addrABX();
-                EOR(RAM[addr[0]]);
+                addrABX();
+                EOR(mem.peek);
             },
             // EOR ABY
             0x59: function () {
-                addr[0] = addrABY();
-                EOR(RAM[addr[0]]);
+                addrABY();
+                EOR(mem.peek);
             },
             // EOR IDX
             0x41: function () {
-                addr[0] = addrIDX();
-                EOR(RAM[addr[0]]);
+                addrIDX();
+                EOR(mem.peek);
             },
             // EOR IDY
             0x51: function () {
-                addr[0] = addrIDY();
+                addrIDY();
                 EOR(addr[0]);
             },
             // INC ZP
             0xE6: function () {
-                addr[0] = addrZP();
-                RAM[addr[0]] = INC(RAM[addr[0]]);
+                addrZP();
+                mem.poke = INC(mem.peek);
             },
             // INC ZPX
             0xF6: function () {
-                addr[0] = addrZPX();
-                RAM[addr[0]] = INC(RAM[addr[0]]);
+                addrZPX();
+                mem.poke = INC(mem.peek);
             },
             // INC AB
             0xEE: function () {
-                addr[0] = addrAB();
-                RAM[addr[0]] = INC(RAM[addr[0]]);
+                addrAB();
+                mem.poke = INC(mem.peek);
             },
             // INC ABX
             0xFE: function () {
-                addr[0] = addrABX();
-                RAM[addr[0]] = INC(RAM[addr[0]]);
+                addrABX();
+                mem.poke = INC(mem.peek);
             },
             // INX
             0xE8: function () {
@@ -657,17 +661,17 @@
             },
             // JMP AB
             0x4C: function() {
-                addr[0] = addrAB();
+                addrAB();
                 JMP(addr[0]);
             },
             // JMP ID
             0x6C: function () {
-                addr[0] = addrID();
-                JMP(RAM[addr[0]]);
+                addrID();
+                JMP(mem.peek);
             },
             // JSR AB
             0x20: function () {
-                addr[0] = addrAB();
+                addrAB();
                 JSR(addr[0]);
             },
             // LDA IM
@@ -676,38 +680,38 @@
             },
             // LDA ZP
             0xA5: function () {
-                addr[0] = addrZP();
-                LDA(RAM[addr[0]]);
+                addrZP();
+                LDA(mem.peek);
             },
             // LDA ZPX
             0xB5: function () {
-                addr[0] = addrZPX();
-                LDA(RAM[addr[0]]);
+                addrZPX();
+                LDA(mem.peek);
             },
             // LDA AB
             0xAD: function () {
-                addr[0] = addrAB();
-                LDA(RAM[addr[0]]);
+                addrAB();
+                LDA(mem.peek);
             },
             // LDA ABX
             0xBD: function () {
-                addr[0] = addrABX();
-                LDA(RAM[addr[0]]);
+                addrABX();
+                LDA(mem.peek);
             },
             // LDA ABY
             0xB9: function () {
-                addr[0] = addrABY();
-                LDA(RAM[addr[0]]);
+                addrABY();
+                LDA(mem.peek);
             },
             // LDA IDX
             0xA1: function () {
-                addr[0] = addrIDX();
-                LDA(RAM[addr[0]]);
+                addrIDX();
+                LDA(mem.peek);
             },
             // LDA IDY
             0xB1: function () {
-                addr[0] = addrIDY();
-                LDA(RAM[addr[0]]);
+                addrIDY();
+                LDA(mem.peek);
             },
             // LDX IM
             0xA2: function () {
@@ -715,23 +719,23 @@
             },
             // LDX ZP
             0xA6: function () {
-                addr[0] = addrZP();
-                LDX(RAM[addr[0]]);
+                addrZP();
+                LDX(mem.peek);
             },
             // LDX ZPY
             0xB6: function () {
-                addr[0] = addrZPY();
-                LDX(RAM[addr[0]]);
+                addrZPY();
+                LDX(mem.peek);
             },
             // LDX AB
             0xAE: function () {
-                addr[0] = addrAB();
-                LDX(RAM[addr[0]]);
+                addrAB();
+                LDX(mem.peek);
             },
             // LDX ABY
             0xBE: function () {
-                addr[0] = addrABY();
-                LDX(RAM[addr[0]]);
+                addrABY();
+                LDX(mem.peek);
             },
             // LDY IM
             0xA0: function () {
@@ -739,31 +743,419 @@
             },
             // LDY ZP
             0xA4: function () {
-                addr[0] = addrZP();
-                LDY(RAM[addr[0]]);
+                addrZP();
+                LDY(mem.peek);
             },
             // LDY ZPX
             0xB4: function () {
-                addr[0] = addrZPX();
-                LDY(RAM[addr[0]]);
+                addrZPX();
+                LDY(mem.peek);
             },
             // LDY AB
             0xAC: function () {
-                addr[0] = addrAB();
-                LDY(RAM[addr[0]]);
+                addrAB();
+                LDY(mem.peek);
             },
             // LDY ABX
             0xBC: function () {
-                addr[0] = addrABX();
-                LDY(RAM[addr[0]]);
+                addrABX();
+                LDY(mem.peek);
+            },
+            // LSR A
+            0x4A: function () {
+                reg[A] = LSR(reg[A]);
+            },
+            // LSR ZP
+            0x46: function () {
+                addrZP();
+                mem.poke = LSR(mem.peek);
+            },
+            // LSR ZPX
+            0x56: function () {
+                addrZPX();
+                mem.poke = LSR(mem.peek);
+            },
+            // LSR AB
+            0x4E: function () {
+                addrAB();
+                mem.poke = LSR(mem.peek);
+            },
+            // LSR ABX
+            0x5E: function () {
+                addrABX();
+                mem.poke = LSR(mem.peek);
+            },
+            // NOP
+            0xEA: function () {},
+            // ORA IM
+            0x09: function () {
+                ORA(eatByte());
+            },
+            // ORA ZP
+            0x05: function () { 
+                addrZP();
+                ORA(mem.peek);
+            },
+            // ORA ZPX
+            0x15: function () {
+                addrZPX();
+                ORA(mem.peek);
+            },
+            // ORA AB
+            0x0D: function () {
+                addrAB();
+                ORA(mem.peek);
+            },
+            // ORA ABX
+            0x1D: function () {
+                addrABX();
+                ORA(mem.peek);
+            },
+            // ORA ABY
+            0x19: function () {
+                addrABY();
+                ORA(mem.peek);
+            },
+            // ORA IDX
+            0x01: function () {
+                addrIDX();
+                ORA(mem.peek);
+            },
+            // ORA IDY
+            0x11: function () {
+                addrIDY();
+                ORA(mem.peek);
+            },
+            // PHA
+            0x40: function () {
+                PHA();
+            },
+            // PHP
+            0x08: function () {
+                PHP();
+            },
+            // PLA
+            0x68: function () {
+                PLA();
+            },
+            // PLP
+            0x28: function () {
+                PLP();
+            },
+            // ROL A
+            0x2A: function () {
+                reg[A] = ROL(reg[A]);
+            },
+            // ROL ZP
+            0x26: function () {
+                addrZP();
+                mem.poke = ROL(mem.peek);
+            },
+            // ROL ZPX
+            0x36: function () {
+                addrZPX();
+                mem.poke = ROL(mem.peek);
+            },
+            // ROL AB
+            0x2E: function () {
+                addrAB();
+                mem.poke = ROL(mem.peek);
+            },
+            // ROL ABX
+            0x3E: function () {
+                addrABX();
+                mem.poke = ROL(mem.peek);
+            },
+            // ROR A
+            0x6A: function () {
+                reg[A] = ROR(reg[A]);
+            },
+            // ROR ZP
+            0x66: function () {
+                addrZP();
+                mem.poke = ROR(mem.peek);
+            },
+            // ROR ZPX
+            0x76: function () {
+                addrZPX();
+                mem.poke = ROR(mem.peek);
+            },
+            // ROR AB
+            0x6E: function () {
+                addrAB();
+                mem.poke = ROR(mem.peek);
+            },
+            // ROR ABX
+            0x7E: function () {
+                addrABX();
+                mem.poke = ROR(mem.peek);
+            },
+            // RTI
+            0x40: function () {
+                RTI();
+            },
+            // RTS
+            0x60: function () {
+                RTS();
+            },
+            // SBC IM
+            0xE9: function () {
+                SBC(eatByte());
+            },
+            // SBC ZP
+            0xE5: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC ZPX
+            0xF5: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC AB
+            0xED: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC ABX
+            0xFD: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC ABY
+            0xF9: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC IDX
+            0xE1: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SBC IDY
+            0xF1: function () {
+                addrZP();
+                SBC(mem.peek);
+            },
+            // SEC
+            0x38: function () {
+                SEC();
+            },
+            // SED
+            0xF8: function () {
+                SED();
+            },
+            // SEI
+            0x78: function () {
+                SEI();
+            },
+            // STA ZP
+            0x85: function () {
+                addrZP();
+                STA()
+            },
+            // STA ZPX
+            0x95: function () {
+                addrZPX();
+                STA()
+            },
+            // STA AB
+            0x8D: function () {
+                addrAB();
+                STA()
+            },
+            // STA ABX
+            0x9D: function () {
+                addrABX();
+                STA()
+            },
+            // STA ABY
+            0x99: function () {
+                addrABY();
+                STA()
+            },
+            // STA IDX
+            0x81: function () {
+                addrIDX();
+                STA()
+            },
+            // STA IDY
+            0x91: function () {
+                addrIDY();
+                STA()
+            },
+            // STX ZP
+            0x86: function () {
+                addrZP();
+                STX();
+            },
+            // STX ZPX
+            0x96: function () {
+                addrZPX();
+                STX();
+            },
+            // STX AB
+            0xBE: function () {
+                addrAB();
+                STX();
+            },
+            // STY ZP
+            0x84: function () {
+                addrZP();
+                STY();
+            },
+            // STY ZPX
+            0x94: function () {
+                addrZPX();
+                STY();
+            },
+            // STY AB
+            0xBC: function () {
+                addrAB();
+                STY();
+            },
+            // TAX
+            0xAA: function () {
+                TAX();
+            },
+            // TAY
+            0xA8: function () {
+                TAY();
+            },
+            // TSX
+            0xBA: function () {
+                TSX();
+            },
+            // TXA
+            0x8A: function () {
+                TXA();
+            },
+            // TXS
+            0x9A: function () {
+                TXS();
+            },
+            // TYA
+            0x98: function () {
+                TYA();
             }
-        };     
-        // Expose some elements for communication
-        // between other modules.
-        scope.CPU6502 = {INSTADDR: INSTADDR};
-        Object.defineProperty(scope.CPU6502, 'RAM', {
-           get: function () {
-               return RAM;
-           } 
-        });
+        },
+        mem = {},
+        dec16ToHex = function (dec) {
+            var h = dec.toString(16);
+            return ('0000'.substr(0, 4 - h.length) + h).toUpperCase();
+        },
+        dec8ToHex = function (dec) {
+            var h = dec.toString(16);
+            return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
+        },
+        opCode,
+        execute = function () {
+            if (!reg[B]) {
+                setTimeout(execute, 16);
+                opCode = eatByte();
+                if (opCode in INSTADDR) {
+                    INSTADDR[opCode]();
+                } else {
+                    console.log('Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC[0] - 1));
+                }
+            } else {
+                console.log('Program terminated at $' + dec16ToHex(PC[0]));
+            }
+        },
+        burnProgramAt = function (src, address) {
+            var index,
+                len = src.length;
+            for (index = 0; index < len; ++index) {
+                RAM[address + index] = src[index];
+            }
+        },
+        statusBitsToString = function () {
+            var index,
+                length = reg.length,
+                str = '';
+            for (index = 3; index < length; ++index) {
+                str += reg[index];
+            }
+            return str;
+        };
+
+    Object.defineProperty(mem, 'poke', {
+        set: function (value) {
+            RAM[addr[0]] = value;
+        }
+    });
+    Object.defineProperty(mem, 'peek', {
+        get: function () {
+            return RAM[addr[0]];
+        }
+    });
+    // Expose some elements for communication
+    // between other modules.
+    scope.CPU6502 = {};
+    Object.defineProperty(scope.CPU6502, 'RAM', {
+       get: function () {
+           return RAM;
+       } 
+    });
+    Object.defineProperty(scope.CPU6502, 'reset', {
+        writable: false,
+        value: function () {
+            var index,
+                len = RAM.lenght;
+            for (index = 0; index < len; ++index) {
+                RAM[index] = 0;
+            }
+            len = reg.length;
+            for (index = 0; index < len; ++index) {
+                reg[index] = 0;
+            }
+            reg[5] = 1;
+            SP[0] = 0xFF;
+            PC[0] = 0;
+        }
+    });
+    Object.defineProperty(scope.CPU6502, 'run', {
+        writable: false,
+        value: function () {
+           execute();
+        }
+    });
+    Object.defineProperty(scope.CPU6502, 'burn', {
+        writable: false,
+        value: burnProgramAt
+    });
+    Object.defineProperty(scope.CPU6502, 'dumpRegisters', {
+        writable: false,
+        value: function () {
+            var str = '\nA: $' + dec8ToHex(reg[A]);
+            str += '\nX: $' + dec8ToHex(reg[X]);
+            str += '\nY: $' + dec8ToHex(reg[Y]);
+            str += '\nSR: ' + statusBitsToString();
+            str += '\nPC: $' + dec16ToHex(PC[0]);
+            str += '\nSP: $' + dec8ToHex(SP[0]);
+            return str + '\n';
+        }
+    });
+    Object.defineProperty(scope.CPU6502, 'dumpMemory', {
+        writable: false,
+        value: function (from, to, columns) {
+            if (typeof from == 'number' && typeof to == 'number') {
+                columns = typeof columns != 'number' ? 16 : columns;
+                var index,
+                    str = '',
+                    len = to - from;
+                for (index = 0; index < len; ++index) {
+                    str += '$' + dec8ToHex(RAM[from + index]) + ' ';
+                    if (index > 0 && index % columns == 0) {
+                        str += '\n';
+                    }
+                }
+                return str;
+            } else {
+                console.log('Missing range for memory dump.');
+            }
+            return '';
+        }
+    });
+    scope.CPU6502.reset();
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
