@@ -15,6 +15,9 @@ self.onconnect = function(e) {
         } else if (e.data[0] == 'ram') {
             window.CPU6502.burn(e.data[1], 0, 65535);
             port.postMessage(['regdump', window.CPU6502.dumpRegisters()]);
+        } else if (e.data[0] == 'reset') {
+            window.CPU6502.reset();
+            port.postMessage(['regdump', window.CPU6502.dumpRegisters()]);
         }
     };
     port.postMessage('connected');

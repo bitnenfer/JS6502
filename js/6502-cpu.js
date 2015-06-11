@@ -1167,6 +1167,9 @@
             A = X = Y = SR = PC = 0;
             SR = setBit(SR, 2);
             SP = 0xFF;
+            if (hasWorker && isWorkerConnected) {
+                worker.port.postMessage(['reset']);
+            }
         }
     });
     Object.defineProperty(CPU6502, 'run', {
