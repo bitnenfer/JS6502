@@ -5,323 +5,347 @@
  **
  **/
 (function (scope) {
-    // Register Indexes
-    var A = 0,
-        X = 1,
-        Y = 2,
-        N = 3,
-        V = 4,
-        B = 6,
-        D = 7,
-        I = 8,
-        Z = 9,
-        C = 10,
-        // Register array
-        reg = new Uint8Array(11),
-        // Program counter
-        PC = new Uint16Array(1),
-        // Stack pointer
-        SP = new Uint8Array(1),
+        // Register 8 bit
+    var A = 0x00, 
+        X = 0x00, 
+        Y = 0x00, 
+        SR = 0x00,
+        // Flag index
+        N = 0,
+        V = 1,
+        B = 3,
+        D = 4,
+        I = 5,
+        Z = 6,
+        C = 7,
+        // Program counter 16 bit
+        PC = 0,
+        // Stack pointer 8 bit
+        SP = 0,
         stackAddress = 0x01FF,
         // 64KB of RAM
         RAM = new Uint8Array(65536),
         // Cached 16 bit addr
-        addr = new Uint16Array(1),
+        addr,
         lsb,
         msb,
         tmp,
-        getBit = function (value, bit) {
-            return (value >> bit) & 1;
+        getBit = function (value, bitpos) {
+            return (value >> bitpos) & 1;
+        },
+        setBit = function (value, bitpos) {
+            value |= 1 << bitpos;
+            return value;
+        },
+        clearBit = function (value, bitpos) {
+            value &= ~(1 << bitpos);
+            return value;
         },
         eatByte = function () {
-            return RAM[PC[0]++];
-        },
-        statusToByte = function () {
-            var byte = 0,
-                index;
-            for (index = 0; index < 8; ++index) {
-                byte *= 2;
-                byte = byte + reg[N + index];
-            }
-            return byte;
-        },
-        byteToStatus = function (m) {
-            var index;
-            for (index = 0; index < 8; ++index) {
-                reg[N + (7 - index)] = m & (1 << index) ? 1 : 0;
-            }
+            return RAM[PC++];
         },
         // Address modes
         // Zero Page
         addrZP = function () {
-            addr[0] = eatByte();
+            addr = eatByte();
         },
         // Zero Page X
         addrZPX = function () {
-            addr[0] = addrZP() + reg[X];
+            addr = addrZP() + X;
         },
         // Zero Page Y
         addrZPY = function () {
-            addr[0] = addrZP() + reg[Y];
+            addr = addrZP() + Y;
         },
         // Absolute
         addrAB = function () {
             lsb = eatByte();
             msb = eatByte();
-            addr[0] = (msb << 8) | (lsb & 0xff);
+            addr = (msb << 8) | (lsb & 0xff);
         },
         // Absolute X
         addrABX = function () {
-            addr[0] = addrAB() + reg[X];
+            addr = addrAB() + X;
         },
         // Absolute Y
         addrABY = function () {
-            addr[0] = addrAB() + reg[Y];
+            addr = addrAB() + Y;
         },
         addrID = function () {
-            addr[0] = RAM[eatByte()];
+            addr = RAM[eatByte()];
         },
         // Indirect X
         addrIDX = function () {
-            addr[0] = RAM[eatByte() + reg[X]];
+            addr = RAM[eatByte() + X];
         },
         // Indirect Y
         addrIDY = function () {
-            addr[0] = RAM[eatByte()] + reg[Y];
+            addr = RAM[eatByte()] + Y;
         },
         // Branch Relative
         brchREL = function () {
-            var l = PC[0]&255|0,
-                h = PC[0]/256|0,
+            var l = PC & 255 | 0,
+                h = PC / 256 | 0,
                 b = eatByte() & 0xFF;
-            PC[0] = (((h << 8 | l) + b) & 0xFF) + 1;
+            PC = (((h << 8 | l) + b) & 0xFF) + 1;
         },
         pushStack = function (m) {
-            RAM[stackAddress + SP[0]] = m;
-            --SP[0];
+            RAM[stackAddress + SP] = m;
+            SP = (SP - 1) & 0xFF;
         },
         popStack = function () {
-            ++SP[0];
-            tmp = RAM[stackAddress + SP[0]];
+            SP = (SP + 1) & 0xFF;
+            tmp = RAM[stackAddress + SP];
             return tmp;
         },
         peek = function () {
-            return RAM[addr[0]];
+            return RAM[addr];
         },
         // Instruction set.
         ADC = function (m) {
-            tmp = reg[A] + m + reg[C];
-            reg[V] = getBit(reg[A], 7) != getBit(tmp, 7) ? 1 : 0;
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = tmp == 0 ? 1 : 0;
+            tmp = (A + m + getBit(SR, C));
+            SR = getBit(A, 7) != getBit(tmp, 7) ? setBit(SR, V) : clearBit(SR, V);
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
             //TODO: Implement decimal mode operation.
-            reg[C] = tmp > 0xFF ? 1 : 0;
-            reg[A] = tmp;
+            SR = tmp > 0xFF ? setBit(SR, C) : clearBit(SR, C);
+            A = tmp & 0xFF;
+            SR = SR & 0xFF;
         },
         AND = function (m) {
-            reg[A] &= m;
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = A & (m & 0xFF);
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         ASL = function (m) {
-            reg[C] = getBit(m, 7);
-            m = (m << 1) & 0xFE;
-            reg[N] = getBit(m);
-            reg[Z] = m == 0 ? 1 : 0;
+            SR = getBit(m, 7) ? setBit(SR, C) : clearBit(SR, C);
+            m = (m << 1) & 0xFE;  
+            SR = getBit(m, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = m == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
             return m;
         },
         BIT = function (m) {
-            tmp = reg[A] & m;
-            reg[N] = getBit(tmp, 7);
-            reg[V] = getBit(tmp, 6);
-            reg[Z] = tmp == 0 ? 1 : 0;
+            tmp = A & (m & 0xFF);
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = getBit(tmp, 6) ? setBit(SR, V) : clearBit(SR, V);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         CMP = function (m) {
-            tmp = reg[A] - m;
-            reg[N] = getBit(tmp, 7);
-            reg[C] = reg[A] >= m ? 1 : 0;
-            reg[Z] = tmp == 0 ? 1 : 0;
+            tmp = (A - m) & 0xFF;
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A >= m ? setBit(SR, C) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         CPX = function (m) {
-            tmp = reg[X]  - m;
-            reg[N] = getBit(tmp, 7);
-            reg[C] = reg[X] >= m ? 1 : 0;
-            reg[Z] = tmp == 0 ? 1 : 0;
+            tmp = (X - m) & 0xFF;
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X >= m ? setBit(SR, C) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         CPY = function (m) {
-            tmp = reg[Y]  - m;
-            reg[N] = getBit(tmp, 7);
-            reg[C] = reg[Y] >= m ? 1 : 0;
-            reg[Z] = tmp == 0 ? 1 : 0;
+            tmp = (Y - m) & 0xFF;
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = Y >= m ? setBit(SR, C) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         DEC = function (m) {
             tmp = (m - 1) & 0xFF;
-            reg[N] = getBit(m, 7);
-            reg[Z] = m == 0 ? 1 : 0;
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
             return tmp;
         },
         DEX = function () {
-            reg[X] = reg[X] - 1;
-            reg[Z] = reg[X] == 0 ? 1 : 0;
-            reg[N] = getBit(reg[X], 7);
+            X = (X - 1) & 0xFF
+            SR = getBit(X, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         DEY = function () {
-            reg[Y] = reg[Y] - 1;
-            reg[Z] = reg[Y] == 0 ? 1 : 0;
-            reg[N] = getBit(reg[Y], 7);
+            Y = (Y - 1) & 0xFF
+            SR = getBit(Y, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = Y == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         EOR = function (m) {
-            reg[A] = reg[A] ^ m;
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = (A ^ m) & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         INC = function (m) {
             tmp = (m + 1) & 0xFF;
-            reg[N] = getBit(tmp, 7);
-            reg[Z] = tmp == 0 ? 1 : 0;
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
             return tmp;
         },
         INX = function () {
-            reg[X] = reg[X] + 1;
-            reg[Z] = reg[X] == 0 ?  1 : 0;
-            reg[N] = getBit(reg[X], 7);
+            X = (X + 1) & 0xFF;
+            SR = getBit(X, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         INY = function () {
-            reg[Y] = reg[Y] + 1;
-            reg[Z] = reg[Y] == 0 ?  1 : 0;
-            reg[N] = getBit(reg[Y], 7);
+            Y = (Y + 1) & 0xFF;
+            SR = getBit(Y, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = Y == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         JMP = function (m) {
-            PC[0] = m;  
+            PC = m & 0xFFFF;  
         },
         JSR = function (m) {
-            tmp = PC[0] - 1;
-            pushStack(tmp/256|0);
-            pushStack(tmp&255|0);
-            PC[0] = m;
+            tmp = (PC - 1) & 0xFFFF;
+            pushStack(tmp / 256 | 0);
+            pushStack(tmp & 255 | 0);
+            PC = m & 0xFFFF;
         },
         LDA = function (m) {
-            reg[A] = m;
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = m & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         LDX = function (m) {
-            reg[X] = m;
-            reg[N] = getBit(reg[X], 7);
-            reg[Z] = reg[X] == 0 ? 1 : 0;
+            X = m & 0xFF;
+            SR = getBit(X, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         LDY = function (m) {
-            reg[Y] = m;
-            reg[N] = getBit(reg[Y], 7);
-            reg[Z] = reg[Y] == 0 ? 1 : 0;  
+            Y = m & 0xFF;
+            SR = getBit(Y, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = Y == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         LSR = function (m) {
-            reg[N] = 0;
-            reg[C] = getBit(m, 0);
+            clearBit(SR, N);
+            SR = getBit(m & 0xFF, 0) ? setBit(SR, C) : clearBit(SR, C);
             tmp = (m >> 1) & 0x7F;
-            reg[Z] = tmp == 0 ? 1 : 0;
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
             return tmp;
         },
         ORA = function (m) {
-            reg[A] = reg[A] | m;
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = (A | m) & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         PHA = function () {
-            pushStack(reg[A]);
+            pushStack(A);
         },
         PHP = function () {
-            pushStack(statusToByte());
+            pushStack(SR);
         },
         PLA = function () {
-            reg[A] = popStack();
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = popStack() & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         PLP = function () {
-            byteToStatus(popStack());   
+            SR = popStack() & 0xFF;
         },
         ROL = function (m) {
-            tmp = getBit(m, 7);
+            tmp = getBit(m & 0xFF, 7);
             m = (m << 1) & 0xFE;
-            m = m | reg[C];
-            reg[C] = tmp;
-            reg[Z] = (m == 0) ? 1 : 0;
-            reg[N] = getBit(m, 7);
+            m = m | getBit(SR, C);
+            SR = tmp ? setBit(SR, C) : clearBit(SR, C);
+            SR = m == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = getBit(m, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = SR & 0xFF;
             return m;
         },
         ROR = function (m) {
-            tmp = getBit(m, 0);
+            tmp = getBit(m & 0xFF, 0);
             m = (m >> 1) & 0x7F;
-            m = m | reg[C] ? 0x80 : 0x00;
-            reg[C] = tmp;
-            reg[Z] = m == 0 ? 1 : 0;
-            reg[N] = getBit(m, 7);
+            m = m | getBit(SR, C) ? 0x80 : 0x00;
+            SR = tmp ? setBit(SR, C) : clearBit(SR, C);
+            SR = m == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = getBit(m, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = SR & 0xFF;
             return m;
         },
         RTI = function () {
-            byteToStatus(popStack());
+            SR = popStack() & 0xFF;
             tmp = popStack();
-            PC[0] = popStack() << 8 | tmp;
+            PC = (popStack() << 8 | tmp) & 0xFF;
         },
         RTS = function () {
             tmp = popStack();
-            PC[0] = (popStack() << 8 | tmp) + 1;
+            PC = ((popStack() << 8 | tmp) + 1) & 0xFF;
         },
         SBC = function (m) {
             //TODO: Implement Decimal mode.
-            tmp = reg[A] - m - (reg[C] == 0 ? 1 : 0);
-            reg[V] = tmp > 127 || tmp < -128 ? 1 : 0;
-            reg[C] = tmp >= 0 ? 1 : 0;
-            reg[N] = getBit(tmp, 7);
-            reg[Z] = tmp == 0 ? 1 : 0;
-            reg[A] = tmp & 0xFF;
+            tmp = A - m - (getBit(SR, C) == 0 ? 1 : 0);
+            SR = tmp > 127 || tmp < -129 ? setBit(SR, V) : clearBit(SR, V);
+            SR = tmp >= 0 ? setBit(SR, C) : clearBit(SR, C)
+            SR = getBit(tmp, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            A = tmp & 0xFF;
+            SR = SR & 0xFF;
         },
         SEC = function () {
-            reg[C] = 1;
+            SR = setBit(SR, C);
+            SR = SR & 0xFF;
         },
         SED = function () {
-            reg[D] = 1;
+            SR = setBit(SR, D);
+            SR = SR & 0xFF;
         },
         SEI = function () {
-            reg[I] = 1;
+            SR = setBit(SR, I);
+            SR = SR & 0xFF;
         },
         STA = function () {
-            RAM[addr[0]] = reg[A];
+            RAM[addr] = A;
         },
         STX = function () {
-            RAM[addr[0]] = reg[X];
+            RAM[addr] = X;
         },
         STY = function () {
-            RAM[addr[0]] = reg[Y];
+            RAM[addr] = Y;
         },
         TAX = function () {
-            reg[X] = reg[A];
-            reg[N] = getBit(reg[X], 7);
-            reg[Z] = reg[X] == 0 ? 1 : 0;
+            X = A & 0xFF;
+            SR = getBit(X, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         TAY = function () {
-            reg[Y] = reg[A];
-            reg[N] = getBit(reg[Y], 7);
-            reg[Z] = reg[Y] == 0 ? 1 : 0;
+            Y = A & 0xFF;
+            SR = getBit(Y, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = Y == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         TSX = function () {
-            reg[X] = SP[0];
-            reg[N] = getBit(reg[X], 7);
-            reg[Z] = reg[X] == 0 ? 1 : 0;
+            X = SP & 0xFF;
+            SR = getBit(X, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = X == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         TXA = function () {
-            reg[A] = reg[X];
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = X & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         TXS = function () {
-            SP[0] = reg[X];
+            SP = X & 0xFF;
         },
         TYA = function () {
-            reg[A] = reg[Y];
-            reg[N] = getBit(reg[A], 7);
-            reg[Z] = reg[A] == 0 ? 1 : 0;
+            A = Y & 0xFF;
+            SR = getBit(A, 7) ? setBit(SR, N) : clearBit(SR, N);
+            SR = A == 0 ? setBit(SR, Z) : clearBit(SR, Z);
+            SR = SR & 0xFF;
         },
         // Instruction addr
         INSTADDR = {
@@ -405,7 +429,7 @@
             },
             // ASL ACC
             0x10: function () {
-                reg[A] = ASL(reg[A]);
+                A = ASL(A);
             },
             // ASL ZP
             0x06: function () {
@@ -429,73 +453,73 @@
             },
             // BCC REL
             0x90: function () {
-                if (reg[C] == 0) brchREL();
-                else ++PC[0];
+                if (getBit(SR, C) == 0) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BCS REL
             0xB0: function () {
-                if (reg[C] == 1) brchREL();
-                else ++PC[0];
+                if (getBit(SR, C) == 1) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BEQ REL
             0xF0: function () {
-                if (reg[Z] == 1) brchREL();
-                else ++PC[0];
+                if (getBit(SR, Z) == 1) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BIT ZP
             0x24: function () {
                 addrZP();
-                BIT(RAM(addr[0]));
+                BIT(RAM(addr));
             },
             // BIP AB
             0x2C: function () {
                 addrAB();
-                BIT(RAM(addr[0]));
+                BIT(RAM(addr));
             },
             // BMI REL
             0x30: function () {
-                if (reg[N] == 1) brchREL();
-                else ++PC[0];
+                if (getBit(SR, N) == 1) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BNE REL
             0xD0: function () {
-                if (reg[Z] == 0) brchREL();
-                else ++PC[0];
+                if (getBit(SR, Z) == 0) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BPL REL
             0x10: function () {
-                if (reg[N] == 0) brchREL();
-                else ++PC[0];
+                if (getBit(SR, N) == 0) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BRK
             0x00: function () {
-                reg[B] = 1;
+                SR = setBit(SR, B) & 0xFF;
             },
             // BVC REL
             0x50: function () {
-                if (reg[V] == 0) brchREL();
-                else ++PC[0];
+                if (getBit(SR, V) == 0) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // BVS REL
             0x70: function () {
-                if (reg[V] == 0) brchREL();
-                else ++PC[0];
+                if (getBit(SR, V) == 1) brchREL();
+                else PC = (PC + 1) & 0xFFFF;
             },
             // CLC IMP
             0x24: function () {
-                reg[C] = 0;
+                clearBit(SR, C);
             },
             // CLD IMP
             0xD8: function () {
-                reg[D] = 0;
+                clearBit(SR, D);
             },
             // CLI IMP
             0x58: function () {
-                reg[I] = 0;
+                clearBit(SR, I);
             },
             // CLV IMP
             0xB8: function () {
-                reg[V] = 0;
+                clearBit(SR, V);
             },
             // CMP IM
             0xC9: function () {
@@ -629,7 +653,7 @@
             // EOR IDY
             0x51: function () {
                 addrIDY();
-                EOR(addr[0]);
+                EOR(addr);
             },
             // INC ZP
             0xE6: function () {
@@ -662,7 +686,7 @@
             // JMP AB
             0x4C: function() {
                 addrAB();
-                JMP(addr[0]);
+                JMP(addr);
             },
             // JMP ID
             0x6C: function () {
@@ -672,7 +696,7 @@
             // JSR AB
             0x20: function () {
                 addrAB();
-                JSR(addr[0]);
+                JSR(addr);
             },
             // LDA IM
             0xA9: function () {
@@ -763,7 +787,7 @@
             },
             // LSR A
             0x4A: function () {
-                reg[A] = LSR(reg[A]);
+                A = LSR(A);
             },
             // LSR ZP
             0x46: function () {
@@ -844,7 +868,7 @@
             },
             // ROL A
             0x2A: function () {
-                reg[A] = ROL(reg[A]);
+                A = ROL(A);
             },
             // ROL ZP
             0x26: function () {
@@ -868,7 +892,7 @@
             },
             // ROR A
             0x6A: function () {
-                reg[A] = ROR(reg[A]);
+                A = ROR(A);
             },
             // ROR ZP
             0x66: function () {
@@ -1048,18 +1072,22 @@
             var h = dec.toString(16);
             return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
         },
+        dec8ToBin = function (dec) {
+            var b = dec.toString(2);
+            return ('00000000'.substr(0, 8 - b.length) + b).split('').reverse().join('');
+        },
         opCode,
-        execute = function () {
-            if (!reg[B]) {
-                setTimeout(execute, 16);
+        executeWithTimer = function () {
+            if (!getBit(SR, B)) {
+                setTimeout(executeWithTimer, 0);
                 opCode = eatByte();
                 if (opCode in INSTADDR) {
                     INSTADDR[opCode]();
                 } else {
-                    console.log('Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC[0] - 1));
+                    console.log('Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC - 1));
                 }
             } else {
-                console.log('Program terminated at $' + dec16ToHex(PC[0]));
+                console.log('Program terminated at $' + dec16ToHex(PC));
             }
         },
         burnProgramAt = function (src, address) {
@@ -1068,75 +1096,62 @@
             for (index = 0; index < len; ++index) {
                 RAM[address + index] = src[index];
             }
-        },
-        statusBitsToString = function () {
-            var index,
-                length = reg.length,
-                str = '';
-            for (index = 3; index < length; ++index) {
-                str += reg[index];
-            }
-            return str;
-        };
+        }, 
+        CPU6502 = {};
 
     Object.defineProperty(mem, 'poke', {
         set: function (value) {
-            RAM[addr[0]] = value;
+            RAM[addr] = value & 0xFF;
         }
     });
     Object.defineProperty(mem, 'peek', {
         get: function () {
-            return RAM[addr[0]];
+            return RAM[addr] & 0xFF;
         }
     });
     // Expose some elements for communication
     // between other modules.
-    scope.CPU6502 = {};
-    Object.defineProperty(scope.CPU6502, 'RAM', {
+    Object.defineProperty(CPU6502, 'RAM', {
        get: function () {
            return RAM;
        } 
     });
-    Object.defineProperty(scope.CPU6502, 'reset', {
+    Object.defineProperty(CPU6502, 'reset', {
         writable: false,
         value: function () {
             var index,
-                len = RAM.lenght;
+                len = RAM.length;
             for (index = 0; index < len; ++index) {
                 RAM[index] = 0;
             }
-            len = reg.length;
-            for (index = 0; index < len; ++index) {
-                reg[index] = 0;
-            }
-            reg[5] = 1;
-            SP[0] = 0xFF;
-            PC[0] = 0;
+            A = X = Y = SR = PC = 0;
+            SR = setBit(SR, 2);
+            SP = 0xFF;
         }
     });
-    Object.defineProperty(scope.CPU6502, 'run', {
+    Object.defineProperty(CPU6502, 'run', {
         writable: false,
         value: function () {
-           execute();
+            executeWithTimer();
         }
     });
-    Object.defineProperty(scope.CPU6502, 'burn', {
+    Object.defineProperty(CPU6502, 'burn', {
         writable: false,
         value: burnProgramAt
     });
-    Object.defineProperty(scope.CPU6502, 'dumpRegisters', {
+    Object.defineProperty(CPU6502, 'dumpRegisters', {
         writable: false,
         value: function () {
-            var str = '\nA: $' + dec8ToHex(reg[A]);
-            str += '\nX: $' + dec8ToHex(reg[X]);
-            str += '\nY: $' + dec8ToHex(reg[Y]);
-            str += '\nSR: ' + statusBitsToString();
-            str += '\nPC: $' + dec16ToHex(PC[0]);
-            str += '\nSP: $' + dec8ToHex(SP[0]);
+            var str = '\nA: $' + dec8ToHex(A);
+            str += '\nX: $' + dec8ToHex(X);
+            str += '\nY: $' + dec8ToHex(Y);
+            str += '\nSR: ' + dec8ToBin(SR);
+            str += '\nPC: $' + dec16ToHex(PC);
+            str += '\nSP: $' + dec8ToHex(SP);
             return str + '\n';
         }
     });
-    Object.defineProperty(scope.CPU6502, 'dumpMemory', {
+    Object.defineProperty(CPU6502, 'dumpMemory', {
         writable: false,
         value: function (from, to, columns) {
             if (typeof from == 'number' && typeof to == 'number') {
@@ -1157,5 +1172,6 @@
             return '';
         }
     });
-    scope.CPU6502.reset();
+    CPU6502.reset();
+    scope.CPU6502 = CPU6502;
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
