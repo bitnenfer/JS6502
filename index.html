@@ -7,18 +7,13 @@
 <script type="text/javascript" src="js/6502-cpu.js"></script>
 <script type="text/javascript" src="js/demo.js"></script>
 <pre>
-    LDX #$00
-loop
-    INX
-    CPX #$FF
-    BNE loop
-    LDY #$05
 
-hexdump: a2 00 e8 e0 ff d0 fb a0 05
 </pre>
-<input type="button" value="load" onclick="CPU6502.burn([0xa2, 0x00, 0xe8, 0xe0 ,0xff, 0xd0, 0xfb, 0xa0, 0x05], 0);"><br>
+<input type="button" value="load" onclick="CPU6502.burn([0xa9, 0xfa, 0x2a  ], 0);"><br>
 <input type="button" value="run" onclick="CPU6502.run();"><br>
 <input type="button" value="reset" onclick="CPU6502.reset();"><br>
+<input type="checkbox" onclick="CheckDebugMode(this);" /><br>
 <pre id='registers'></pre>
+<pre id='memory'></pre>
 </body>
 </html>
