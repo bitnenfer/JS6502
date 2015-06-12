@@ -428,7 +428,7 @@
                 AND(mem.peek);
             },
             // ASL ACC
-            0x10: function () {
+            0x0A: function () {
                 A = ASL(A);
             },
             // ASL ZP
