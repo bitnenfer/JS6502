@@ -5,10 +5,10 @@
  **
  **/
 (function (scope) {
-        // Register 8 bit
-    var A = 0x00, 
-        X = 0x00, 
-        Y = 0x00, 
+    // Register 8 bit
+    var A = 0x00,
+        X = 0x00,
+        Y = 0x00,
         SR = 0x00,
         // Flag index
         N = 0,
@@ -120,7 +120,7 @@
         },
         ASL = function (m) {
             SR = getBit(m, 7) ? setBit(SR, C) : clearBit(SR, C);
-            m = (m << 1) & 0xFE;  
+            m = (m << 1) & 0xFE;
             SR = getBit(m, 7) ? setBit(SR, N) : clearBit(SR, N);
             SR = m == 0 ? setBit(SR, Z) : clearBit(SR, Z);
             SR = SR & 0xFF;
@@ -199,7 +199,7 @@
             SR = SR & 0xFF;
         },
         JMP = function (m) {
-            PC = m & 0xFFFF;  
+            PC = m & 0xFFFF;
         },
         JSR = function (m) {
             tmp = (PC - 1) & 0xFFFF;
@@ -684,7 +684,7 @@
                 INY();
             },
             // JMP AB
-            0x4C: function() {
+            0x4C: function () {
                 addrAB();
                 JMP(addr);
             },
@@ -816,7 +816,7 @@
                 ORA(eatByte());
             },
             // ORA ZP
-            0x05: function () { 
+            0x05: function () {
                 addrZP();
                 ORA(mem.peek);
             },
@@ -1082,16 +1082,18 @@
         isWorkerRunning = false,
         loadWorker = function () {
             worker = new SharedWorker('js/6502-cpu-worker.js');
-            worker.port.onmessage = function(e) {
+            worker.port.onmessage = function (e) {
                 if (e.data == 'finish') {
                     isWorkerRunning = false;
                 } else if (e.data == 'connected') {
-                    isWorkerConnected =  true;
+                    isWorkerConnected = true;
                 } else if (e.data[0] == 'regdump') {
                     registerDumpData = e.data[1];
+                } else if (e.data[0] == 'memdump') {
+                    console.log(e.data[1]);
                 }
             };
-            
+
             worker.port.start();
         },
         executeWithSharedWorker = function () {
@@ -1152,9 +1154,9 @@
     // Expose some elements for communication
     // between other modules.
     Object.defineProperty(CPU6502, 'RAM', {
-       get: function () {
-           return RAM;
-       } 
+        get: function () {
+            return RAM;
+        }
     });
     Object.defineProperty(CPU6502, 'reset', {
         writable: false,
@@ -1176,7 +1178,7 @@
         writable: false,
         value: function () {
             if (hasWorker && isWorkerConnected) {
-                executeWithSharedWorker();  
+                executeWithSharedWorker();
             } else {
                 executeWithTimer();
             }
@@ -1212,17 +1214,21 @@
     });
     Object.defineProperty(CPU6502, 'dumpMemory', {
         writable: false,
-        value: function (from, to, columns) {
-            if (typeof from == 'number' && typeof to == 'number') {
+        value: function (from, count, columns) {
+            if (typeof from == 'number' && typeof count == 'number') {
                 columns = typeof columns != 'number' ? 16 : columns;
                 var index,
                     str = '',
-                    len = to - from;
+                    len = count;
                 for (index = 0; index < len; ++index) {
                     str += '$' + dec8ToHex(RAM[from + index]) + ' ';
                     if (index > 0 && index % columns == 0) {
                         str += '\n';
                     }
+                }
+                if (isWorkerConnected) {
+                    worker.port.postMessage(['memdump', from, count]);
+                    return;
                 }
                 return str;
             } else {

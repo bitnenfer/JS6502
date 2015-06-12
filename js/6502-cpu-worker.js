@@ -18,7 +18,10 @@ self.onconnect = function(e) {
         } else if (e.data[0] == 'reset') {
             window.CPU6502.reset();
             port.postMessage(['regdump', window.CPU6502.dumpRegisters()]);
+        } else if (e.data[0] == 'memdump') {
+            port.postMessage(['memdump', window.CPU6502.dumpMemory(e.data[1], e.data[2])]);
         }
+
     };
     port.postMessage('connected');
     port.start();
