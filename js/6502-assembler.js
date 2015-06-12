@@ -41,6 +41,16 @@
                                     ++index;
                                 }
                                 --index;
+                            } else if (peek(0) == '*') {
+                                tokens.push({
+                                    type: 'asterisk',
+                                    value: '*'
+                                });
+                            } else if (peek(0) == '=') {
+                                tokens.push({
+                                    type: 'equal',
+                                    value: '='
+                                });
                             } else if (peek(0) == '\n') {
                                 tokens.push({
                                     type: 'newline',
