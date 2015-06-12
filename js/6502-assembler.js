@@ -73,7 +73,7 @@
                                         type: 'register',
                                         value: str
                                     });
-                                } else if (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0) {
+                                } else if (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',') {
                                     tokens.push({
                                         type: 'label',
                                         value: str
@@ -165,6 +165,17 @@
                                     break;
                                 }
                                 --index;
+                            } else if (peek(0).search(/[0-9]/g) >= 0) {
+                                var str = '';
+                                while (peek(0) != null && peek(0).search(/[0-9]/g) >= 0) {
+                                    str += peek(0);
+                                    ++index;
+                                }
+                                tokens.push({
+                                    type: 'immediate_dec',
+                                    value: str
+                                });
+                                --index;
                             }
                             ++index;
                         }
@@ -228,14 +239,14 @@
                                     }
                                 } else if (token.type == 'lparen') {
                                     token = peek(1);
-                                    if (token != null && token.type == 'address_hex' && token.value.length == 4) {
+                                    if (token != null && peek(2) != null && peek(2).type == 'rparen' && peek(3) != null && peek(3).type != 'comma' && ((token.type == 'address_hex' && token.value.length == 4) || token.type == 'label')) {
                                         token = peek(2);
                                         if (token != null && token.type == 'rparen') {
                                             return 'IND';
                                         } else {
                                             throw 'Missing right paren.';
                                         }
-                                    } else if (token != null && token.type == 'address_hex' && token.value.length == 2) {
+                                    } else if (token != null && ((token.type == 'address_hex' && token.value.length == 2) || token.type == 'label')) {
                                         token = peek(2);
                                         if (token != null && token.type == 'comma') {
                                             token = peek(3);
@@ -290,7 +301,6 @@
                                     }
                                 }
                                 return arr;
-                                break;
                             case 'AB':
                             case 'ZP':
                                 if (token != null && token.type == 'address_hex') {
@@ -325,6 +335,8 @@
                                     if (token != null && token.type == 'address_hex') {
                                         token.value = parseInt(token.value, 16);
                                         arr.push(token);
+                                    } else if (token != null && token.type == 'label') {
+                                        arr.push(token);
                                     } else {
                                         throw 'Invalid address';
                                     }
@@ -340,8 +352,10 @@
                                 if (token != null && token.type == 'lparen') {
                                     ++index;
                                     token = peek(0);
-                                    if (token != null && token.type == 'address_hex') {
-                                        token.value = parseInt(token.value, 16);
+                                    if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
+                                        if (token.type == 'address_hex') {
+                                            token.value = parseInt(token.value, 16);
+                                        }
                                         arr.push(token);
                                         index += 1;
                                         token = peek(0);
@@ -370,8 +384,10 @@
                                 if (token != null && token.type == 'lparen') {
                                     ++index;
                                     token = peek(0);
-                                    if (token != null && token.type == 'address_hex') {
-                                        token.value = parseInt(token.value, 16);
+                                    if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
+                                        if (token.type == 'address_hex') {
+                                            token.value = parseInt(token.value, 16);
+                                        }
                                         arr.push(token);
                                         index += 1;
                                         token = peek(0);
@@ -413,36 +429,56 @@
 
                         }
                         throw 'Invalid address mode.';
-                        return arr;
-                    };
-
-                if (tokenStream instanceof Array) {
-                    while (!eof(0) && peek(0) != null) {
-                        var token = peek(0);
-                        var seq = {};
-                        if (token.type == 'mnemonic') {
-                            seq.type = 'op';
-                            seq.action = token.value;
-                            ++index;
-                            seq.mode = getAddressingMode();
-                            seq.addr = getAddressValue(seq.mode);
-                            sequence.push(seq);
-                        } else if (token.type == 'label') {
-                            seq.type = 'labeling';
-                            seq.labelName = token.value;
-                            sequence.push(seq);
-                        } else if (token.type == 'macro') {
-                            seq.type = 'macrouse';
-                            seq.macroName = token.value;
-                            sequence.push(seq);
+                    },
+                    parse = function () {
+                        if (tokenStream instanceof Array) {
+                            while (!eof(0) && peek(0) != null) {
+                                var token = peek(0);
+                                var seq = {};
+                                if (token.type == 'mnemonic') {
+                                    seq.type = 'op';
+                                    seq.action = token.value;
+                                    ++index;
+                                    seq.mode = getAddressingMode();
+                                    seq.addr = getAddressValue(seq.mode);
+                                    sequence.push(seq);
+                                } else if (token.type == 'label') {
+                                    seq.type = 'labeling';
+                                    seq.labelName = token.value;
+                                    sequence.push(seq);
+                                } else if (token.type == 'macro') {
+                                    seq.type = 'macrouse';
+                                    seq.macroName = token.value;
+                                    seq.args = [];
+                                    ++index;
+                                    var token = peek(0);
+                                    while (!eof(0) && token != null && token.type != '\n') {
+                                        if (token.type == 'address_hex') {
+                                            token.value = parseInt(token.value, 16);
+                                        } else if (token.type == 'immediate_dec') {
+                                            token.value = parseInt(token.value);
+                                        }
+                                        if (token.type != 'comma' && token.type != 'newline') {
+                                            seq.args.push(token);
+                                        }
+                                        ++index;
+                                        token = peek(0);
+                                    }
+                                    sequence.push(seq);
+                                } else if (token.type != 'newline') {
+                                    console.log(token);
+                                    throw 'Invalid token "' + token.type + '" at address ' + index;
+                                }
+                                ++index;
+                            }
+                        } else {
+                            throw 'invalid token stream';
                         }
-                        ++index;
-                    }
-                } else {
-                    throw 'invalid token stream';
-                }
+                    };
+                    
                 return {
                     getSequence: function () {
+                        parse();
                         return sequence;    
                     }
                 };

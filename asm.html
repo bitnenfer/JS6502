@@ -5,13 +5,12 @@
 </head>
 <body>
 <pre id="code">
-print
-    lda #$FF
-    ldx #245
-    sta $FF00
-    cmp #$00
-    bne print
-    brk
+sta ($10,x)
+sta ($40), y
+sta ($5000)
+sta (FOO)
+sta (BAR, x)
+sta (LOO), y
 </pre>
 <input type="button" value="assemble" onclick="assemble();" />
 <script type="text/javascript" src="js/6502-assembler.js"></script>
