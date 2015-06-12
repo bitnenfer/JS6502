@@ -5,7 +5,13 @@
 </head>
 <body>
 <pre id="code">
-hello .dsad
+print
+    lda #$FF
+    ldx #245
+    sta $FF00
+    cmp #$00
+    bne print
+    brk
 </pre>
 <input type="button" value="assemble" onclick="assemble();" />
 <script type="text/javascript" src="js/6502-assembler.js"></script>
