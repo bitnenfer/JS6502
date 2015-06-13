@@ -5,8 +5,10 @@
 </head>
 <body>
 <pre id="code">
-hello 
-.word $480, $990, $320
+main
+cmp #0
+bne main
+brk
 </pre>
 <input type="button" value="assemble" onclick="assemble();" />
 <script type="text/javascript" src="js/6502-assembler.js"></script>

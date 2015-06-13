@@ -17,7 +17,7 @@
         lookupTable = {
             // Source of lookup table:
             // https://github.com/skilldrick/easy6502/blob/gh-pages/simulator/assembler.js
-            //MN  IMM    ZP    ZPX   ZPY   ABS   ABX   ABY  IND   IDX   IDY   IMP   REL
+            //MN  IMM    ZP    ZPX   ZPY   AB    ABX   ABY  IND   IDX   IDY   IMP   REL
             ADC: [0x69, 0x65, 0x75, null, 0x6d, 0x7d, 0x79, null, 0x61, 0x71, null, null],
             AND: [0x29, 0x25, 0x35, null, 0x2d, 0x3d, 0x39, null, 0x21, 0x31, null, null],
             ASL: [null, 0x06, 0x16, null, 0x0e, 0x1e, null, null, null, null, 0x0a, null],
@@ -116,6 +116,33 @@
                                     ++index;
                                 }
                                 --index;
+                            } else if (peek(0) == '"') {
+                                ++index;
+                                while (!eof(0) && peek(0) != '"') {
+                                    tokens.push({
+                                        type: 'immediate_dec',
+                                        value: '' + peek(0).charCodeAt(0) & 0xFF
+                                    });
+                                    tokens.push({
+                                        type: 'comma',
+                                        value: ','
+                                    });
+                                    ++index;
+                                }
+                                if (peek(0) != '"') {
+                                    throw 'Missing " in string literal';
+                                }
+                            } else if (peek(0) == "'") {
+                                ++index;
+                                if (peek(1) == "'") {
+                                    tokens.push({
+                                        type: 'immediate_dec',
+                                        value: '' + peek(0).charCodeAt(0) & 0xFF
+                                    });
+                                    index++;
+                                } else {
+                                    throw 'Missing \' in char literal';
+                                }
                             } else if (peek(0) == '*') {
                                 tokens.push({
                                     type: 'asterisk',
@@ -513,13 +540,18 @@
                                 if (token.type == 'mnemonic') {
                                     seq.type = 'op';
                                     seq.opCode = token.value;
+                                    
                                     ++index;
                                     seq.mode = getAddressingMode();
-                                    seq.addr = getAddressValue(seq.mode);
+                                    seq.args = getAddressValue(seq.mode);
+                                    if (seq.opCode == 'JMP' && seq.mode == 'REL') {
+                                        seq.mode = 'AB';
+                                    }
                                     sequence.push(seq);
                                 } else if (token.type == 'label') {
                                     seq.type = 'labeling';
                                     seq.labelName = token.value;
+                                    seq.args = [];
                                     sequence.push(seq);
                                 } else if (token.type == 'macro') {
                                     seq.type = 'macrouse';
@@ -563,7 +595,7 @@
             return function (sequence) {
                 var index = 0,
                     objectCode = [],
-                    lables = {},
+                    labels = {},
                     eof = function (step) {
                         return (index + step >= sequence.length);
                     },
@@ -573,15 +605,49 @@
                         }
                         return null;
                     },
-                    readLables = function () {
-                        var idx;
-                        for (idx = 0; idx < sequence.length; ++idx) {
-                            if (sequence[idx].type == 'labeling') {
-                                lables[sequence[idx].labelName] = idx;
+                    getSizeOfArgs = function (args, opcode) {
+                        var size = 0,
+                            val = 0,
+                            tok;
+                        for (var i = 0; i < args.length; ++i) {
+                            tok = args[i];
+                            if (tok.type == 'immediate_dec' || tok.type == 'immediate_hex' || tok.type == 'address_hex') {
+                                val = tok.value;
+                                if (val > 0xFF && val <= 0xFFFF) {
+                                    size += 2;
+                                } else if (val <= 0xFF) {
+                                    size += 1;
+                                } else {
+                                    throw 'No support for 32 bit integer';
+                                }
+                            } else if (tok.type == 'label') {
+                                if (opcode == 'JMP') {
+                                    size += 2;
+                                } else {
+                                    size += 1;
+                                }
                             }
                         }
+                        return size;
                     },
-                    resolveByte = function (token) {
+                    readLables = function () {
+                        var idx,
+                            addr = 0,
+                            oc;
+                        for (idx = 0; idx < sequence.length; ++idx) {
+                            if (sequence[idx].type == 'op') {
+                                oc = sequence[idx].opCode;
+                            } else {
+                                oc = '';
+                            }
+                            addr += getSizeOfArgs(sequence[idx].args, oc);
+                            if (sequence[idx].type == 'labeling') {
+                                labels[sequence[idx].labelName] = addr;
+                            }
+                            ++addr;
+                        }
+                    },
+                    resolveByte = function (token, opcode) {
                         if (token.type == 'address_hex' || 
                             token.type == 'immediate_dec' ||
                             token.type == 'immediate_hex' ) {
@@ -596,7 +662,18 @@
                             // null value shouldn't be added to the oc
                             return null;
                         } else if (token.type == 'label') {
-                            return 0xFF;
+                            if (token.value in labels) {
+                                if (opcode == 'JMP') {
+                                    var b = [];
+                                    b.push((labels[token.value] / 256) | 0);
+                                    b.push((labels[token.value] & 255) | 0);
+                                    return b;
+                                } else {
+                                    console.log(objectCode.length);
+                                    return (labels[token.value] - objectCode.length - 1) & 0xFF;
+                                }
+                            }
+                            throw 'There is no ' + token.value + ' identifier.';
                         } else {
                             throw 'Can\'t resolve byte of type ' + token.type;
                         }
@@ -620,18 +697,24 @@
                                 var addr = lookOpAddress(seq.opCode, seq.mode);
                                 if (addr != null) {
                                     objectCode.push(addr);
-                                    var args = seq.addr;
+                                    var args = seq.args;
                                     for (var i = 0; i < args.length; ++i) {
-                                        var b = resolveByte(args[i]);
+                                        var b = resolveByte(args[i], seq.opCode);
                                         if (b != null) {
                                             if (b instanceof Array) {
-                                                objectCode.push(b.pop());
-                                                objectCode.push(b.pop());
+                                                if (seq.mode == 'AB' || seq.mode == 'IND') {
+                                                    objectCode.push(b.pop());
+                                                    objectCode.push(b.pop());
+                                                } else {
+                                                    throw 'Invalid bit size in argument.';
+                                                }
                                             } else {
                                                 objectCode.push(b);
                                             }
                                         }
                                     }
+                                } else {
+                                    throw 'Invalid OpCode '+ seq.opCode +' with address mode ' + seq.mode;
                                 }
                             } else if (seq.type == 'macrouse') {
                                 for (var i = 0; i < seq.args.length; ++i) {
@@ -650,16 +733,13 @@
                             }
                             ++index;
                         }
-                    },
-                    dec8ToHex = function (dec) {
-                        var h = dec.toString(16);
-                        return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
                     };
                     
                 return {
                     getObjectCode: function () {
                         if (sequence instanceof Array) {
                             if (sequence.length > 0) {
+                                readLables();
                                 gen();
                                 return objectCode;
                             } else {
@@ -669,38 +749,42 @@
                             throw 'Invalid sequence stream.';
                         }
                         return null;
-                    },
-                    objectCodeDump: function () {
-                        var index,
-                            str = '',
-                            len = objectCode.length;
-                        for (index = 0; index < len; ++index) {
-                            str += dec8ToHex(objectCode[index]) + ' ';
-                            if (index > 0 && index % 16 == 0) {
-                                str += '\n';
-                            }
-                        }
-                        return str;
                     }
                 };
             };
         }()),
         lexer,
         parser,
-        generator;
+        generator,
+        dec8ToHex = function (dec) {
+            var h = dec.toString(16);
+            return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
+        },
+        objectCodeDump = function (objectCode) {
+            var index,
+                str = '',
+                len = objectCode.length;
+            for (index = 0; index < len; ++index) {
+                str += dec8ToHex(objectCode[index]) + ' ';
+                if (index > 0 && index % 16 == 0) {
+                    str += '\n';
+                }
+            }
+            return str;
+        };
         
     ASM6502.processSource = function (source) {
         var tokens, sequence, objectCode;
         lexer = Lexer(source);
         tokens = lexer.getTokens();
         parser = Parser(tokens);
-        sequence = parser.getSequence(),
+        sequence = parser.getSequence();
         generator = OCGen(sequence);
         objectCode = generator.getObjectCode();
         return objectCode;
     };
-    ASM6502.dumpObjectCodeToHex = function () {
-        return typeof generator != 'undefined' ? generator.objectCodeDump() : '';
+    ASM6502.dumpObjectCodeToHex = function (objectCode) {
+        return objectCodeDump(objectCode);
     };
     scope.ASM6502 = ASM6502;
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
