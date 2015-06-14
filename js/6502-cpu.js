@@ -1081,48 +1081,12 @@
             return ('00000000'.substr(0, 8 - b.length) + b).split('').reverse().join('');
         },
         opCode,
-        // I'll disable SharedWorker for now.
-        hasWorker = false/*typeof SharedWorker != 'undefined'*/,
-        worker,
-        isWorkerRunning = false,
-        loadWorker = function () {
-            worker = new SharedWorker('js/6502-cpu-worker.js');
-            worker.port.onmessage = function (e) {
-                if (e.data == 'finish') {
-                    isWorkerRunning = false;
-                    worker.port.close();
-                    isWorkerConnected = false;
-                } else if (e.data == 'connected') {
-                    isWorkerConnected = true;
-                } else if (e.data[0] == 'regdump') {
-                    registerDumpData = e.data[1];
-                } else if (e.data[0] == 'memdump') {
-                    console.log(e.data[1]);
-                }
-            };
-
-            worker.port.start();
-        },
-        executeWithSharedWorker = function () {
-            if (!isWorkerRunning) {
-                worker.port.postMessage(['run']);
-                isWorkerRunning = true;
-            }
-        },
-        executeInThread = function (port, callback) {
-            var int = 0;
-            while (!getBit(SR, B)) {
-                opCode = eatByte();
-                if (opCode in INSTADDR) {
-                    INSTADDR[opCode]();
-                }
-                callback();
-                port.postMessage(int++);
-            }
-        },
         executeWithTimer = function () {
             if (!getBit(SR, B)) {
-                
+                if (shouldStop) {
+                    logData.push('Program stopped at $' + dec16ToHex(PC));
+                    return;
+                }
                 setTimeout(executeWithTimer, 0);
                 opCode = eatByte();
                 if (opCode in INSTADDR) {
@@ -1140,15 +1104,11 @@
             for (index = 0; index < len; ++index) {
                 RAM[address + index] = src[index];
             }
-            if (hasWorker && isWorkerConnected) {
-                worker.port.postMessage(['ram', RAM]);
-            }
         },
-        isWorker = typeof WorkerGlobalScope != 'undefined' && self instanceof WorkerGlobalScope,
         registerDumpData = '',
-        isWorkerConnected = false,
         CPU6502 = {},
-        logData = [];
+        logData = [],
+        shouldStop = false;
 
     Object.defineProperty(mem, 'poke', {
         set: function (value) {
@@ -1168,6 +1128,12 @@
             return logData.pop();
         }
     });
+    Object.defineProperty(CPU6502, 'stop', {
+        writable: false,
+        value: function () {
+            shouldStop = true;
+        }
+    });
     Object.defineProperty(CPU6502, 'RAM', {
         get: function () {
             return RAM;
@@ -1181,32 +1147,21 @@
             for (index = 0; index < len; ++index) {
                 RAM[index] = 0;
             }
-            A = X = Y = SR = PC = 0;
+            A = 0;
+            X = 0;
+            Y = 0;
+            SR = 0;
+            PC = 0;
             SR = setBit(SR, 2);
             SP = 0xFF;
-            if (hasWorker && isWorkerConnected) {
-                worker.port.postMessage(['reset']);
-            } else if (hasWorker && !isWorkerConnected) {
-                loadWorker();
-            }
+            shouldStop = false;
         }
     });
     Object.defineProperty(CPU6502, 'run', {
         writable: false,
         value: function () {
-            if (hasWorker && isWorkerConnected) {
-                executeWithSharedWorker();
-            } else {
-                executeWithTimer();
-            }
-        }
-    });
-    Object.defineProperty(CPU6502, 'runOnThread', {
-        writable: false,
-        value: function (port, callback) {
-            if (isWorker) {
-                executeInThread(port, callback);
-            }
+            executeWithTimer();
+            shouldStop = false;
         }
     });
     Object.defineProperty(CPU6502, 'burn', {
@@ -1216,17 +1171,13 @@
     Object.defineProperty(CPU6502, 'dumpRegisters', {
         writable: false,
         value: function () {
-            if (isWorker || !hasWorker) {
-                var str = 'A: $' + dec8ToHex(A);
-                str += '\nX: $' + dec8ToHex(X);
-                str += '\nY: $' + dec8ToHex(Y);
-                str += '\nSR: ' + dec8ToBin(SR);
-                str += '\nPC: $' + dec16ToHex(PC);
-                str += '\nSP: $' + dec8ToHex(SP);
-                return str + '\n';
-            } else {
-                return registerDumpData;
-            }
+            var str = 'A: $' + dec8ToHex(A);
+            str += '\nX: $' + dec8ToHex(X);
+            str += '\nY: $' + dec8ToHex(Y);
+            str += '\nSR: ' + dec8ToBin(SR);
+            str += '\nPC: $' + dec16ToHex(PC);
+            str += '\nSP: $' + dec8ToHex(SP);
+            return str + '\n';
         }
     });
     Object.defineProperty(CPU6502, 'dumpMemory', {
@@ -1248,10 +1199,6 @@
                         str += ' ';
                     }
                 }
-                if (isWorkerConnected) {
-                    worker.port.postMessage(['memdump', from, count]);
-                    return;
-                }
                 return str;
             } else {
                 throw 'Missing range for memory dump.';
@@ -1261,7 +1208,4 @@
     });
     CPU6502.reset();
     scope.CPU6502 = CPU6502;
-    if (hasWorker) {
-        loadWorker();
-    }
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
