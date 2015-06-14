@@ -1081,7 +1081,8 @@
             return ('00000000'.substr(0, 8 - b.length) + b).split('').reverse().join('');
         },
         opCode,
-        hasWorker = typeof SharedWorker != 'undefined',
+        // I'll disable SharedWorker for now.
+        hasWorker = false/*typeof SharedWorker != 'undefined'*/,
         worker,
         isWorkerRunning = false,
         loadWorker = function () {
@@ -1127,10 +1128,10 @@
                 if (opCode in INSTADDR) {
                     INSTADDR[opCode]();
                 } else {
-                    console.log('Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC - 1));
+                    throw 'Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC - 1);
                 }
             } else {
-                console.log('Program terminated at $' + dec16ToHex(PC));
+                logData.push('Program terminated at $' + dec16ToHex(PC));
             }
         },
         burnProgramAt = function (src, address) {
@@ -1146,7 +1147,8 @@
         isWorker = typeof WorkerGlobalScope != 'undefined' && self instanceof WorkerGlobalScope,
         registerDumpData = '',
         isWorkerConnected = false,
-        CPU6502 = {};
+        CPU6502 = {},
+        logData = [];
 
     Object.defineProperty(mem, 'poke', {
         set: function (value) {
@@ -1160,6 +1162,12 @@
     });
     // Expose some elements for communication
     // between other modules.
+    Object.defineProperty(CPU6502, 'popLog', {
+        writable: false,
+        value: function () {
+            return logData.pop();
+        }
+    });
     Object.defineProperty(CPU6502, 'RAM', {
         get: function () {
             return RAM;
@@ -1208,8 +1216,8 @@
     Object.defineProperty(CPU6502, 'dumpRegisters', {
         writable: false,
         value: function () {
-            if (isWorker) {
-                var str = '\nA: $' + dec8ToHex(A);
+            if (isWorker || !hasWorker) {
+                var str = 'A: $' + dec8ToHex(A);
                 str += '\nX: $' + dec8ToHex(X);
                 str += '\nY: $' + dec8ToHex(Y);
                 str += '\nSR: ' + dec8ToBin(SR);
@@ -1228,11 +1236,16 @@
                 columns = typeof columns != 'number' ? 16 : columns;
                 var index,
                     str = '',
-                    len = count;
+                    len = count,
+                    col = 0;
                 for (index = 0; index < len; ++index) {
-                    str += '$' + dec8ToHex(RAM[from + index]) + ' ';
-                    if (index > 0 && index % columns == 0) {
+                    str += dec8ToHex(RAM[from + index]);
+                    ++col;
+                    if (col == columns) {
                         str += '\n';
+                        col = 0;
+                    } else {
+                        str += ' ';
                     }
                 }
                 if (isWorkerConnected) {
@@ -1241,7 +1254,7 @@
                 }
                 return str;
             } else {
-                console.log('Missing range for memory dump.');
+                throw 'Missing range for memory dump.';
             }
             return '';
         }
