@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>6502 Assembler</title>
+    <script type="text/javascript" src="js/asmdemo.js"></script>
+    <script type="text/javascript" src="js/6502-assembler.js"></script>
+    <link href='//fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        .center {
+            width: 800px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+    </style>
+</head>
+    <body style="font-family: monospace; background-color: #000000; color: #fff;">
+        <div class="center">
+        <pre id="errors" style="color:red;width:250px; height:20px;"></pre>
+        <div style="overflow: hidden;">
+            <div style="float:left;margin-right: 20px;">
+                Source:<br><br>
+                <textarea spellcheck='false' autofocus id="code" rows="4" cols="50" style="outline: 0; resize: none; border:0; font-family: 'VT323' ; font-size: 20px;color: #65abff; background-color:#0041a3; overflow-y: auto; height:300px; width: 400px;"></textarea>
+            </div >
+            <div >
+                Object Code:<br>
+                <pre id="object-code" style="overflow-y: auto; height:300px; width: 370px; border: 1px solid;"></pre>
+            </div>
+        </div>
+        
+        <input type="button" value="assemble" onclick="assemble();" />
+        </div>
+    </body>
+</html>

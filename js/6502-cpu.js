@@ -428,7 +428,7 @@
                 AND(mem.peek);
             },
             // ASL ACC
-            0x10: function () {
+            0x0A: function () {
                 A = ASL(A);
             },
             // ASL ZP
@@ -1170,18 +1170,18 @@
             SR = setBit(SR, 2);
             SP = 0xFF;
             if (hasWorker && isWorkerConnected) {
-                worker.port.postMessage(['reset']);
+                //worker.port.postMessage(['reset']);
             }
         }
     });
     Object.defineProperty(CPU6502, 'run', {
         writable: false,
         value: function () {
-            if (hasWorker && isWorkerConnected) {
+            /*if (hasWorker && isWorkerConnected) {
                 executeWithSharedWorker();
-            } else {
+            } else {*/
                 executeWithTimer();
-            }
+            //}
         }
     });
     Object.defineProperty(CPU6502, 'runOnThread', {
@@ -1199,7 +1199,7 @@
     Object.defineProperty(CPU6502, 'dumpRegisters', {
         writable: false,
         value: function () {
-            if (isWorker) {
+            //if (isWorker) {
                 var str = '\nA: $' + dec8ToHex(A);
                 str += '\nX: $' + dec8ToHex(X);
                 str += '\nY: $' + dec8ToHex(Y);
@@ -1207,9 +1207,9 @@
                 str += '\nPC: $' + dec16ToHex(PC);
                 str += '\nSP: $' + dec8ToHex(SP);
                 return str + '\n';
-            } else {
-                return registerDumpData;
-            }
+            //} else {
+            //    return registerDumpData;
+            //}
         }
     });
     Object.defineProperty(CPU6502, 'dumpMemory', {
@@ -1226,10 +1226,10 @@
                         str += '\n';
                     }
                 }
-                if (isWorkerConnected) {
+                /*if (isWorkerConnected) {
                     worker.port.postMessage(['memdump', from, count]);
                     return;
-                }
+                }*/
                 return str;
             } else {
                 console.log('Missing range for memory dump.');
@@ -1240,6 +1240,6 @@
     CPU6502.reset();
     scope.CPU6502 = CPU6502;
     if (hasWorker) {
-        loadWorker();
+        //loadWorker();
     }
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
