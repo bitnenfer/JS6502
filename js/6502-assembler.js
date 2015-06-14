@@ -91,8 +91,18 @@
             'STX', 'STY', 'TAX', 'TAY',
             'TSX', 'TXA', 'TXS', 'TYA'
         ],
-        macros = [
+        directives = [
             'BYTE', 'WORD'
+        ],
+        branchNmemonics = [
+            'BCC',
+            'BCS',
+            'BEQ',
+            'BMI',
+            'BNE',
+            'BPL',
+            'BVC',
+            'BVS'
         ],
         Lexer = (function () {
             return function (source) {
@@ -175,7 +185,7 @@
                                         type: 'register',
                                         value: str
                                     });
-                                } else if (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',') {
+                                } else if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',')) {
                                     tokens.push({
                                         type: 'label',
                                         value: str
@@ -185,7 +195,7 @@
                                     break;
                                 }
                                 --index;
-                            } else if (peek(0).search(/( |\t)+/g) >= 0) {
+                            } else if (!eof(0) && peek(0).search(/( |\t)+/g) >= 0) {
                                 while (!eof(0) && peek(0).search(/( |\t)+/g) >= 0) {
                                     ++index;
                                 }
@@ -249,17 +259,17 @@
                                     type: 'rparen',
                                     value: ')'
                                 });
-                            } else if (peek(0) == '.' && peek(1) != null && peek(1).search(/[a-zA-Z]/g) >= 0) {
+                            } else if (peek(0) != null && peek(0) == '.' && peek(1) != null && peek(1).search(/[a-zA-Z]/g) >= 0) {
                                 ++index;
                                 var str = '';
-                                while (peek(0).search(/[a-zA-Z]/g) >= 0) {
+                                while (peek(0) != null && peek(0).search(/[a-zA-Z]/g) >= 0) {
                                     str += peek(0);
                                     ++index;
                                 }
                                 str = str.toUpperCase();
-                                if (macros.indexOf(str) >= 0) {
+                                if (directives.indexOf(str) >= 0) {
                                     tokens.push({
-                                        type: 'macro',
+                                        type: 'directive',
                                         value: str
                                     });
                                 } else {
@@ -267,7 +277,7 @@
                                     break;
                                 }
                                 --index;
-                            } else if (peek(0).search(/[0-9]/g) >= 0) {
+                            } else if (peek(0) != null && peek(0).search(/[0-9]/g) >= 0) {
                                 var str = '';
                                 while (peek(0) != null && peek(0).search(/[0-9]/g) >= 0) {
                                     str += peek(0);
@@ -315,7 +325,7 @@
                             if (token.type == 'immediate_dec' || token.type == 'immediate_hex') {
                                 return 'IMM';
                             } else {
-                                if (token.type == 'register' && token.value == 'A') {
+                                if (token.type == 'register' && (token.value == 'A')) {
                                     return 'A';
                                 } else if (token.type == 'address_hex') {
                                     if (token.value.length == 2) {
@@ -339,6 +349,16 @@
                                         }
                                         return 'AB';
                                     }
+                                } else if (token.type == 'label' && peek(-1) != null && branchNmemonics.indexOf(peek(-1).value) < 0) {
+                                    token = peek(1);
+                                    if (token != null && token.type == 'comma') {
+                                        token = peek(2);
+                                        if (token != null && token.type == 'register') {
+                                            if (token.value == 'X') return 'ABX';
+                                            if (token.value == 'Y') return 'ABY';
+                                        }
+                                    }
+                                    return 'AB';
                                 } else if (token.type == 'lparen') {
                                     token = peek(1);
                                     if (token != null && peek(2) != null && peek(2).type == 'rparen' && peek(3) != null && peek(3).type != 'comma' && ((token.type == 'address_hex' && token.value.length == 4) || token.type == 'label')) {
@@ -385,8 +405,7 @@
                                 }
                             }
                         }
-                        console.log(token, index, tokenStream);
-                        throw 'Incorrect addressing mode';
+                        return 'IMP';
                     },
                     getAddressValue = function (mode) {
                         var arr = [],
@@ -404,6 +423,10 @@
                                 }
                                 return arr;
                             case 'AB':
+                                if (token.type == 'label') {
+                                    arr.push(token);
+                                    return arr;
+                                }
                             case 'ZP':
                                 if (token != null && token.type == 'address_hex') {
                                     token.value = parseInt(token.value, 16);
@@ -415,6 +438,15 @@
                                 break;
                             case 'ABX':
                             case 'ABY':
+                                if (token.type == 'label') {
+                                    arr.push(token);
+                                    index += 2;
+                                    token = peek(0);
+                                    if (token != null && token.type == 'register') {
+                                        arr.push(token);
+                                    }
+                                    return arr;
+                                }
                             case 'ZPY':
                             case 'ZPX':
                                 if (token != null && token.type == 'address_hex') {
@@ -530,7 +562,7 @@
                                 }
 
                         }
-                        throw 'Invalid address mode.';
+                        throw 'Invalid address mode ' + mode;
                     },
                     parse = function () {
                         if (tokenStream instanceof Array) {
@@ -540,22 +572,18 @@
                                 if (token.type == 'mnemonic') {
                                     seq.type = 'op';
                                     seq.opCode = token.value;
-                                    
                                     ++index;
                                     seq.mode = getAddressingMode();
                                     seq.args = getAddressValue(seq.mode);
-                                    if (seq.opCode == 'JMP' && seq.mode == 'REL') {
-                                        seq.mode = 'AB';
-                                    }
                                     sequence.push(seq);
                                 } else if (token.type == 'label') {
                                     seq.type = 'labeling';
                                     seq.labelName = token.value;
                                     seq.args = [];
                                     sequence.push(seq);
-                                } else if (token.type == 'macro') {
-                                    seq.type = 'macrouse';
-                                    seq.macroName = token.value;
+                                } else if (token.type == 'directive') {
+                                    seq.type = 'directiveuse';
+                                    seq.directiveName = token.value;
                                     seq.args = [];
                                     ++index;
                                     var token = peek(0);
@@ -565,6 +593,9 @@
                                         } else if (token.type == 'immediate_dec') {
                                             token.value = parseInt(token.value);
                                         }
+                                        if (token.type == 'mnemonic') {
+                                            break;
+                                        }
                                         if (token.type != 'comma' && token.type != 'newline') {
                                             seq.args.push(token);
                                         }
@@ -573,7 +604,6 @@
                                     }
                                     sequence.push(seq);
                                 } else if (token.type != 'newline') {
-                                    console.log(token);
                                     throw 'Invalid token "' + token.type + '" at address ' + index;
                                 }
                                 ++index;
@@ -621,9 +651,9 @@
                                     throw 'No support for 32 bit integer';
                                 }
                             } else if (tok.type == 'label') {
-                                if (opcode == 'JMP') {
+                                if (branchNmemonics.indexOf(opcode) < 0) {
                                     size += 2;
-                                } else {
+                                } else if (branchNmemonics.indexOf(opcode) >= 0){
                                     size += 1;
                                 }
                             }
@@ -643,8 +673,10 @@
                             addr += getSizeOfArgs(sequence[idx].args, oc);
                             if (sequence[idx].type == 'labeling') {
                                 labels[sequence[idx].labelName] = addr;
+                            } else {
+                                ++addr;
                             }
-                            ++addr;
+                            
                         }
                     },
                     resolveByte = function (token, opcode) {
@@ -663,13 +695,12 @@
                             return null;
                         } else if (token.type == 'label') {
                             if (token.value in labels) {
-                                if (opcode == 'JMP') {
+                                if (branchNmemonics.indexOf(opcode) < 0) {
                                     var b = [];
                                     b.push((labels[token.value] / 256) | 0);
                                     b.push((labels[token.value] & 255) | 0);
                                     return b;
                                 } else {
-                                    console.log(objectCode.length);
                                     return (labels[token.value] - objectCode.length - 1) & 0xFF;
                                 }
                             }
@@ -702,7 +733,7 @@
                                         var b = resolveByte(args[i], seq.opCode);
                                         if (b != null) {
                                             if (b instanceof Array) {
-                                                if (seq.mode == 'AB' || seq.mode == 'IND') {
+                                                if (seq.mode == 'AB' || seq.mode == 'IND' || seq.mode == 'ABX' || seq.mode == 'ABY') {
                                                     objectCode.push(b.pop());
                                                     objectCode.push(b.pop());
                                                 } else {
@@ -716,16 +747,16 @@
                                 } else {
                                     throw 'Invalid OpCode '+ seq.opCode +' with address mode ' + seq.mode;
                                 }
-                            } else if (seq.type == 'macrouse') {
+                            } else if (seq.type == 'directiveuse') {
                                 for (var i = 0; i < seq.args.length; ++i) {
                                     var b = resolveByte(seq.args[i]);
-                                    if (b instanceof Array && seq.macroName == 'WORD') {
+                                    if (b instanceof Array && seq.directiveName == 'WORD') {
                                         objectCode.push(b.pop());
                                         objectCode.push(b.pop());
-                                    } else if (typeof b == 'number' && seq.macroName == 'BYTE') {
+                                    } else if (typeof b == 'number' && seq.directiveName == 'BYTE') {
                                         objectCode.push(b);
                                     } else {
-                                        throw 'Incorrect byte size for macro ' + seq.macroName;
+                                        throw 'Incorrect byte size for directive ' + seq.directiveName;
                                     }
                                 }
                             } else if (seq.type != 'labeling') {
@@ -743,7 +774,7 @@
                                 gen();
                                 return objectCode;
                             } else {
-                                console.log('Empty program.');
+                                throw 'Empty program.';
                             }
                         } else {
                             throw 'Invalid sequence stream.';
