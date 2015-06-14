@@ -51,11 +51,13 @@
         },
         // Zero Page X
         addrZPX = function () {
-            addr = addrZP() + X;
+            addrZP();
+            addr += X;
         },
         // Zero Page Y
         addrZPY = function () {
-            addr = addrZP() + Y;
+            addrZP();
+            addr += Y;
         },
         // Absolute
         addrAB = function () {
@@ -65,11 +67,13 @@
         },
         // Absolute X
         addrABX = function () {
-            addr = addrAB() + X;
+            addrAB();
+            addr += X;
         },
         // Absolute Y
         addrABY = function () {
-            addr = addrAB() + Y;
+            addrAB();
+            addr += Y;
         },
         addrID = function () {
             addr = RAM[eatByte()];
@@ -1085,6 +1089,8 @@
             worker.port.onmessage = function (e) {
                 if (e.data == 'finish') {
                     isWorkerRunning = false;
+                    worker.port.close();
+                    isWorkerConnected = false;
                 } else if (e.data == 'connected') {
                     isWorkerConnected = true;
                 } else if (e.data[0] == 'regdump') {
@@ -1115,6 +1121,7 @@
         },
         executeWithTimer = function () {
             if (!getBit(SR, B)) {
+                
                 setTimeout(executeWithTimer, 0);
                 opCode = eatByte();
                 if (opCode in INSTADDR) {
@@ -1170,18 +1177,20 @@
             SR = setBit(SR, 2);
             SP = 0xFF;
             if (hasWorker && isWorkerConnected) {
-                //worker.port.postMessage(['reset']);
+                worker.port.postMessage(['reset']);
+            } else if (hasWorker && !isWorkerConnected) {
+                loadWorker();
             }
         }
     });
     Object.defineProperty(CPU6502, 'run', {
         writable: false,
         value: function () {
-            /*if (hasWorker && isWorkerConnected) {
+            if (hasWorker && isWorkerConnected) {
                 executeWithSharedWorker();
-            } else {*/
+            } else {
                 executeWithTimer();
-            //}
+            }
         }
     });
     Object.defineProperty(CPU6502, 'runOnThread', {
@@ -1199,7 +1208,7 @@
     Object.defineProperty(CPU6502, 'dumpRegisters', {
         writable: false,
         value: function () {
-            //if (isWorker) {
+            if (isWorker) {
                 var str = '\nA: $' + dec8ToHex(A);
                 str += '\nX: $' + dec8ToHex(X);
                 str += '\nY: $' + dec8ToHex(Y);
@@ -1207,9 +1216,9 @@
                 str += '\nPC: $' + dec16ToHex(PC);
                 str += '\nSP: $' + dec8ToHex(SP);
                 return str + '\n';
-            //} else {
-            //    return registerDumpData;
-            //}
+            } else {
+                return registerDumpData;
+            }
         }
     });
     Object.defineProperty(CPU6502, 'dumpMemory', {
@@ -1226,10 +1235,10 @@
                         str += '\n';
                     }
                 }
-                /*if (isWorkerConnected) {
+                if (isWorkerConnected) {
                     worker.port.postMessage(['memdump', from, count]);
                     return;
-                }*/
+                }
                 return str;
             } else {
                 console.log('Missing range for memory dump.');
@@ -1240,6 +1249,6 @@
     CPU6502.reset();
     scope.CPU6502 = CPU6502;
     if (hasWorker) {
-        //loadWorker();
+        loadWorker();
     }
 }(typeof window != 'undefined' ? window : typeof exports != 'undefined' ? exports : {}));
