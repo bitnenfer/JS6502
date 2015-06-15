@@ -29,11 +29,18 @@
     var inputAddress = 0xE300,
         onKeyDown = function (e) {
             if (CPU6502.isRunning()) {
-                CPU6502.setByte(inputAddress, e.keyCode)
+                CPU6502.setByte(inputAddress, e.keyCode);
+                e.preventDefault();
+            }
+        },
+        onKeyUp = function (e) {
+            if (CPU6502.isRunning()) {
+                CPU6502.setByte(inputAddress, 0);
                 e.preventDefault();
             }
         };
     scope.addEventListener('load', function (e) {
         document.getElementById('canvas').addEventListener('keydown', onKeyDown);
+        document.getElementById('canvas').addEventListener('keyup', onKeyUp);
     });
 }(window));

@@ -616,22 +616,22 @@
             // DEC ZP
             0xC6: function () {
                 addrZP();
-                DEC(mem.peek);
+                mem.poke = DEC(mem.peek);
             },
             // DEC ZPX
             0xD6: function () {
                 addrZPX();
-                DEC(mem.peek);
+                mem.poke = DEC(mem.peek);
             },
             // DEC AB
             0xCE: function () {
                 addrAB();
-                DEC(mem.peek);
+                mem.poke = DEC(mem.peek);
             },
             // DEC ABX
             0xDE: function () {
                 addrABX();
-                DEC(mem.peek);
+                mem.poke = DEC(mem.peek);
             },
             // DEX
             0xCA: function () {
@@ -1158,6 +1158,12 @@
             return RAM[address];
         }
     });
+    Object.defineProperty(CPU6502, 'setByte', {
+        writable: false,
+        value: function (address, value) {
+            RAM[address] = value & 0xFF;
+        }
+    });
     Object.defineProperty(CPU6502, 'popLog', {
         writable: false,
         value: function () {
@@ -1214,6 +1220,12 @@
             shouldPause = true;
             shouldStop = false;
             executeWithTimer();
+        }
+    });
+    Object.defineProperty(CPU6502, 'isRunning', {
+        writable: false,
+        value: function () {
+            return !shouldStop && !shouldPause;
         }
     });
     Object.defineProperty(CPU6502, 'burn', {
