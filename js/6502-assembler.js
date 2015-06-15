@@ -603,7 +603,9 @@
                                     ++index;
                                     seq.mode = getAddressingMode();
                                     seq.args = getAddressValue(seq.mode);
-                                    sequence.push(seq);
+                                    if (seq.opCode != 'NOP') {                                    
+                                        sequence.push(seq);
+                                    }
                                 } else if (token.type == 'label') {
                                     seq.type = 'labeling';
                                     seq.labelName = token.value;
