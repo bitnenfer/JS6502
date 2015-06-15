@@ -1,9 +1,30 @@
-/**
- **
- **     6502 JavaScript Emulator
- **     Author: Felipe Alfonso
- **
- **/
+/*
+ *   6502 JavaScript Emulator and Assembler
+ *   http://damnbrain.com/
+ *
+ *   The MIT License (MIT)
+ *   
+ *   Copyright (c) 2015 Felipe Alfonso
+ *   
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *   
+ *   The above copyright notice and this permission notice shall be included in all
+ *   copies or substantial portions of the Software.
+ *   
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
+ *
+ */
 (function (scope) {
     // Register 8 bit
     var A = 0x00,
@@ -1023,7 +1044,7 @@
                 STX();
             },
             // STX AB
-            0xBE: function () {
+            0x8E: function () {
                 addrAB();
                 STX();
             },
@@ -1082,20 +1103,28 @@
         },
         opCode,
         executeWithTimer = function () {
-            if (!getBit(SR, B)) {
-                if (shouldStop) {
-                    logData.push('Program stopped at $' + dec16ToHex(PC));
-                    return;
-                }
-                setTimeout(executeWithTimer, 0);
-                opCode = eatByte();
-                if (opCode in INSTADDR) {
-                    INSTADDR[opCode]();
+            try {
+                if (!getBit(SR, B)) {
+                    opCode = eatByte();
+                    if (opCode in INSTADDR) {
+                        INSTADDR[opCode]();
+                    } else {
+                        logData.push('Invalid OpCode $' + dec8ToHex(opCode) + ' at instruction address $' + dec16ToHex(PC - 1));
+                    }
+                    if (shouldStop || shouldPause) {
+                        if (shouldStop) {
+                            logData.push('Program stopped at $' + dec16ToHex(PC));
+                            PC = 0;
+                        }
+                        return;
+                    } else {
+                        setTimeout(executeWithTimer, 0);
+                    }
                 } else {
-                    throw 'Invalid OpCode $' + dec8ToHex(opCode), 'at instruction address $' + dec16ToHex(PC - 1);
+                    logData.push('Program terminated at $' + dec16ToHex(PC));
                 }
-            } else {
-                logData.push('Program terminated at $' + dec16ToHex(PC));
+            } catch (e) {
+                throw e;
             }
         },
         burnProgramAt = function (src, address) {
@@ -1108,7 +1137,8 @@
         registerDumpData = '',
         CPU6502 = {},
         logData = [],
-        shouldStop = false;
+        shouldStop = false,
+        shouldPause = false;
 
     Object.defineProperty(mem, 'poke', {
         set: function (value) {
@@ -1122,6 +1152,12 @@
     });
     // Expose some elements for communication
     // between other modules.
+    Object.defineProperty(CPU6502, 'getByte', {
+        writable: false,
+        value: function (address) {
+            return RAM[address];
+        }
+    });
     Object.defineProperty(CPU6502, 'popLog', {
         writable: false,
         value: function () {
@@ -1132,6 +1168,12 @@
         writable: false,
         value: function () {
             shouldStop = true;
+        }
+    });
+    Object.defineProperty(CPU6502, 'pause', {
+        writable: false,
+        value: function () {
+            shouldPause = true;
         }
     });
     Object.defineProperty(CPU6502, 'RAM', {
@@ -1154,14 +1196,24 @@
             PC = 0;
             SR = setBit(SR, 2);
             SP = 0xFF;
-            shouldStop = false;
+            shouldStop = true;
+            shouldPause = true;
         }
     });
     Object.defineProperty(CPU6502, 'run', {
         writable: false,
         value: function () {
-            executeWithTimer();
             shouldStop = false;
+            shouldPause = false;
+            executeWithTimer();
+        }
+    });
+    Object.defineProperty(CPU6502, 'step', {
+        writable: false,
+        value: function () {
+            shouldPause = true;
+            shouldStop = false;
+            executeWithTimer();
         }
     });
     Object.defineProperty(CPU6502, 'burn', {
