@@ -43,7 +43,7 @@
         PC = 0,
         // Stack pointer 8 bit
         SP = 0,
-        stackAddress = 0x01FF,
+        stackAddress = 0xF1FF,
         // 64KB of RAM
         RAM = new Uint8Array(65536),
         // Cached 16 bit addr
@@ -301,12 +301,17 @@
         },
         RTI = function () {
             SR = popStack() & 0xFF;
+            /*
             tmp = popStack();
-            PC = (popStack() << 8 | tmp) & 0xFF;
+            PC = (popStack() << 8 | tmp);*/
+            lsb = popStack();
+            msb = popStack();
+            PC = ((msb << 8 | lsb) + 1) & 0xFF;
         },
         RTS = function () {
-            tmp = popStack();
-            PC = ((popStack() << 8 | tmp) + 1) & 0xFF;
+            lsb = popStack();
+            msb = popStack();
+            PC = ((msb << 8 | lsb) + 1) & 0xFF;
         },
         SBC = function (m) {
             //TODO: Implement Decimal mode.
