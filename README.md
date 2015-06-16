@@ -24,7 +24,8 @@ The assembler has:
 - 6502 mnemonics.
 - Labeling
 
-Note:
+Note
+----
 - There might still be some issues with the assembler.
 - Decimal mode not implemented yet
 - Origin cannot be set yet.
