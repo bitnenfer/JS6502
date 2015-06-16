@@ -14,6 +14,7 @@ The emulator has:
 - Background color is defined at address $E400.
 - Text color is defined at address $E401.
 - Color values go from $0 to $F.
+- Keyboard input address is $E300
 
 About the assembler
 -------------------
