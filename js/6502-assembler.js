@@ -617,14 +617,14 @@
                                     seq.args = [];
                                     ++index;
                                     var token = peek(0);
-                                    while (!eof(0) && token != null && token.type != '\n') {
+                                    while (!eof(0) && token != null &&
+                                            token.type != 'mnemonic' && 
+                                            token.type != 'label' && token.type != '\n') {
+                                                
                                         if (token.type == 'address_hex') {
                                             token.value = parseInt(token.value, 16);
                                         } else if (token.type == 'immediate_dec') {
                                             token.value = parseInt(token.value);
-                                        }
-                                        if (token.type == 'mnemonic') {
-                                            break;
                                         }
                                         if (token.type != 'comma' && token.type != 'newline') {
                                             seq.args.push(token);
@@ -632,7 +632,24 @@
                                         ++index;
                                         token = peek(0);
                                     }
+                                    --index;
                                     sequence.push(seq);
+                                } else if (token.type == 'asterisk') {
+                                    if (peek(1) != null && peek(1).type == 'equal') {
+                                        seq.type = 'originset';
+                                        seq.args = [];
+                                        index += 2;
+                                        if (peek(0) != null && peek(0).type == 'address_hex') {
+                                            token = peek(0);
+                                            token.value = parseInt(token.value, 16);
+                                            seq.args.push(token);
+                                        } else {
+                                            throw 'Incorrect type of address.';
+                                        }
+                                        sequence.push(seq);
+                                    } else {
+                                        throw 'Missing assignment of start address.';
+                                    }
                                 } else if (token.type != 'newline') {
                                     throw 'Invalid token "' + token.type + '" at address ' + index;
                                 }
@@ -654,8 +671,8 @@
         OCGen = (function () {
             return function (sequence) {
                 var index = 0,
-                    objectCode = [],
                     labels = {},
+                    objectCode = [],
                     eof = function (step) {
                         return (index + step >= sequence.length);
                     },
@@ -703,7 +720,7 @@
                             addr += getSizeOfArgs(sequence[idx].args, oc);
                             if (sequence[idx].type == 'labeling') {
                                 labels[sequence[idx].labelName] = addr;
-                            } else {
+                            } else if (sequence[idx].type != 'directiveuse') {
                                 ++addr;
                             }
                             
@@ -778,17 +795,23 @@
                                     throw 'Invalid OpCode '+ seq.opCode +' with address mode ' + seq.mode;
                                 }
                             } else if (seq.type == 'directiveuse') {
-                                for (var i = 0; i < seq.args.length; ++i) {
-                                    var b = resolveByte(seq.args[i]);
-                                    if (b instanceof Array && seq.directiveName == 'WORD') {
-                                        objectCode.push(b.pop());
-                                        objectCode.push(b.pop());
-                                    } else if (typeof b == 'number' && seq.directiveName == 'BYTE') {
-                                        objectCode.push(b);
-                                    } else {
-                                        throw 'Incorrect byte size for directive ' + seq.directiveName;
+                                if (seq.args.length > 0) {
+                                    for (var i = 0; i < seq.args.length; ++i) {
+                                        var b = resolveByte(seq.args[i]);
+                                        if (b instanceof Array && seq.directiveName == 'WORD') {
+                                            objectCode.push(b.pop());
+                                            objectCode.push(b.pop());
+                                        } else if (typeof b == 'number' && seq.directiveName == 'BYTE') {
+                                            objectCode.push(b);
+                                        } else {
+                                            throw 'Incorrect byte size for directive ' + seq.directiveName;
+                                        }
                                     }
+                                } else {
+                                    throw 'Not enough arguments for directive.';
                                 }
+                            } else if (seq.type == 'originset') {
+                                //TODO: Implement origin
                             } else if (seq.type != 'labeling') {
                                 throw 'Invalid sequence of type ' + seq.type;
                             }
@@ -817,6 +840,7 @@
         lexer,
         parser,
         generator,
+        origin = 0,
         dec8ToHex = function (dec) {
             var h = dec.toString(16);
             return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
@@ -843,6 +867,9 @@
         generator = OCGen(sequence);
         objectCode = generator.getObjectCode();
         return objectCode;
+    };
+    ASM6502.getOrigin = function (source) {
+        return origin;
     };
     ASM6502.dumpObjectCodeToHex = function (objectCode) {
         return objectCodeDump(objectCode);

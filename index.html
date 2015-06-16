@@ -44,7 +44,29 @@
             <!-- Editor Start -->
             <div id="editor-container">
                 <pre id="error-output"></pre>
-                <textarea id="source" class="source-code" rows="4" cols="50" spellcheck='false' autofocus></textarea>
+                <textarea id="source" class="source-code" rows="4" cols="50" spellcheck='false' autofocus>
+	LDA #$03
+	STA $E401
+	LDA HELLO
+	
+PRINTF
+	STA $01C0, X
+	STA $0600, X ;TEXT BUFFER
+	INX
+	LDA HELLO, X
+	CMP #$00
+	BNE PRINTF
+	BRK
+
+HELLO
+	.BYTE "HELLO 6502!", $0D, 
+	"I AM PRINTING IN",$0D, 
+	"THE SCREEN",
+	$00, $9B
+
+                
+
+                </textarea>
                 <div id="buttons">
                     <input id="btn-asm" class="button" type="button" value="ASM" />
                     <input id="btn-run" class="button" type="button" value="RUN" />
@@ -61,6 +83,7 @@
             <div id="debug">
                  <!-- Debug Start-->
                 <div id="mem-controls">
+                    Instruction: <input id='instr' class="input-text" type="text" disabled></input>
                     Address: $<input id="mem-from" class="input-text" type="text" value="0000" />
                     Count: <input id="mem-count" class="input-text" type="text" value="256" onkeypress="return event.charCode >= 48 && event.charCode <= 57"/>
                 </div>

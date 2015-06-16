@@ -531,7 +531,7 @@
                 else PC = (PC + 1) & 0xFFFF;
             },
             // CLC IMP
-            0x24: function () {
+            0x18: function () {
                 clearBit(SR, C);
             },
             // CLD IMP
@@ -876,7 +876,7 @@
                 ORA(mem.peek);
             },
             // PHA
-            0x40: function () {
+            0x48: function () {
                 PHA();
             },
             // PHP
@@ -1059,7 +1059,7 @@
                 STY();
             },
             // STY AB
-            0xBC: function () {
+            0x8C: function () {
                 addrAB();
                 STY();
             },
@@ -1101,7 +1101,7 @@
             var b = dec.toString(2);
             return ('00000000'.substr(0, 8 - b.length) + b).split('').reverse().join('');
         },
-        opCode,
+        opCode = 0,
         executeWithTimer = function () {
             try {
                 if (!getBit(SR, B)) {
@@ -1133,6 +1133,7 @@
             for (index = 0; index < len; ++index) {
                 RAM[address + index] = src[index];
             }
+            PC = address;
         },
         registerDumpData = '',
         CPU6502 = {},
@@ -1202,6 +1203,7 @@
             PC = 0;
             SR = setBit(SR, 2);
             SP = 0xFF;
+            opCode = 0;
             shouldStop = true;
             shouldPause = true;
         }
@@ -1220,6 +1222,12 @@
             shouldPause = true;
             shouldStop = false;
             executeWithTimer();
+        }
+    });
+    Object.defineProperty(CPU6502, 'currentInstruction', {
+        writable: false,
+        value: function () {
+            return opCode;
         }
     });
     Object.defineProperty(CPU6502, 'isRunning', {
