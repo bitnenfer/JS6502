@@ -499,12 +499,12 @@
             // BIT ZP
             0x24: function () {
                 addrZP();
-                BIT(RAM(addr));
+                BIT(RAM[addr]);
             },
             // BIP AB
             0x2C: function () {
                 addrAB();
-                BIT(RAM(addr));
+                BIT(RAM[addr]);
             },
             // BMI REL
             0x30: function () {
@@ -1109,24 +1109,31 @@
         opCode = 0,
         executeWithTimer = function () {
             try {
-                if (!getBit(SR, B)) {
-                    opCode = eatByte();
-                    if (opCode in INSTADDR) {
-                        INSTADDR[opCode]();
-                    } else {
-                        logData.push('Invalid OpCode $' + dec8ToHex(opCode) + ' at instruction address $' + dec16ToHex(PC - 1));
-                    }
-                    if (shouldStop || shouldPause) {
-                        if (shouldStop) {
-                            logData.push('Program stopped at $' + dec16ToHex(PC));
-                            PC = 0;
+                var count = 0;
+                while (count < 0xFF) {
+                    if (!getBit(SR, B)) {
+                        opCode = eatByte();
+                        if (opCode in INSTADDR) {
+                            INSTADDR[opCode]();
+                        } else {
+                            logData.push('Invalid OpCode $' + dec8ToHex(opCode) + ' at instruction address $' + dec16ToHex(PC - 1));
                         }
-                        return;
+                        if (shouldStop || shouldPause) {
+                            if (shouldStop) {
+                                logData.push('Program stopped at $' + dec16ToHex(PC));
+                                PC = 0;
+                            }
+                            return;
+                        } else {                            
+                            ++count;
+                        }
                     } else {
-                        setTimeout(executeWithTimer, 0);
-                    }
-                } else {
-                    logData.push('Program terminated at $' + dec16ToHex(PC));
+                        logData.push('Program terminated at $' + dec16ToHex(PC));
+                        break;
+                    }                    
+                }
+                if (count == 0xFF) {
+                    setTimeout(executeWithTimer, 0);
                 }
             } catch (e) {
                 throw e;

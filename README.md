@@ -5,11 +5,6 @@
 6502 Emulator and Assembler written in JavaScript 
 by [Felipe Alfonso](http://twitter.com/pixelstab).
 
-More information about the 6502 microprocessor can be found at [6502.org](http://6502.org/) and
-[Wikipedia](https://en.wikipedia.org/?title=MOS_Technology_6502).
-
-For information about 6502 assembly I recommend [6502.org/tutorials](http://6502.org/tutorials/)
-
 About the Emulator
 -------------------
 The emulator has:
@@ -19,7 +14,6 @@ The emulator has:
 - Background color is defined at address $E400.
 - Text color is defined at address $E401.
 - Color values go from $0 to $F.
-- Keyboard input address is $E300
 
 About the assembler
 -------------------

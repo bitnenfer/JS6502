@@ -28,6 +28,7 @@
 <html>
     <head>
         <title>6502 Emulator and Assembler</title>
+        <script type="text/javascript" src="js/typedarrays.js"></script>
         <script type="text/javascript" src="js/6502-cpu.js"></script>
         <script type="text/javascript" src="js/6502-assembler.js"></script>
         <script type="text/javascript" src="js/main.js"></script>
@@ -37,46 +38,40 @@
         <link rel="stylesheet" href="css/style.css" type="text/css" />
     </head>
     <body>
-        <div style="color:#fff;">
-            Source Code at <a href="https://github.com/damnbrain/6502.js">GitHub</a>
-        </div>
         <div id="wrapper" class="center">
-            <div id="canvas-cotainer">
+        <pre id="error-output"></pre>
+            <div id="canvas-container">
                 <canvas id="canvas" width="320" height="320" tabindex=1></canvas>
+                <textarea id="source" class="source-code" spellcheck='false' autofocus>
+    LDA #$03
+    STA $E401
+    LDA HELLO
+    
+PRINTF
+    STA $01C0, X
+    STA $0600, X ;TEXT BUFFER
+    INX
+    LDA HELLO, X
+    CMP #$00
+    BNE PRINTF
+    BRK
+
+HELLO
+    .BYTE "HELLO 6502!", $0D, 
+    "I AM PRINTING IN",$0D, 
+    "THE SCREEN",
+    $00, $9B
+                </textarea>
             </div>
             <!-- Editor Start -->
             <div id="editor-container">
-                <pre id="error-output"></pre>
-                <textarea id="source" class="source-code" rows="4" cols="50" spellcheck='false' autofocus>
-	LDA #$03
-	STA $E401
-	LDA HELLO
-	
-PRINTF
-	STA $01C0, X
-	STA $0600, X ;TEXT BUFFER
-	INX
-	LDA HELLO, X
-	CMP #$00
-	BNE PRINTF
-	BRK
-
-HELLO
-	.BYTE "HELLO 6502!", $0D, 
-	"I AM PRINTING IN",$0D, 
-	"THE SCREEN",
-	$00, $9B
-
-                
-
-                </textarea>
                 <div id="buttons">
-                    <input id="btn-asm" class="button" type="button" value="ASM" />
-                    <input id="btn-run" class="button" type="button" value="RUN" />
-                    <input id="btn-pause" class="button" type="button" value="STOP"/>
-                    <input id="btn-reset" class="button" type="button" value="RESET" />
-                    <input id="btn-step" class="button" type="button" value="STEP" />
-                    <input id="btn-dump" class="button" type="button" value="OBJ" />
+                    <input title="Assemble Program" id="btn-asm" class="button" type="button" value="ASSEMBLE" />
+                    <input title="Run Object Code" id="btn-run" class="button" type="button" value="RUN" />
+                    <input title="Stop Execution" id="btn-pause" class="button" type="button" value="STOP"/>
+                    <input title="Reset Registers and Memory" id="btn-reset" class="button" type="button" value="RESET" />
+                    <input title="Step to Next Instruction" id="btn-step" class="button" type="button" value="STEP" />
+                    <input title="Dump Object Code" id="btn-dump" class="button" type="button" value="OBJ CODE" />
                 </div>
                 DEBUG:
                 <input id="btn-debug" type="checkbox" checked="true" /><br>
@@ -86,7 +81,7 @@ HELLO
             <div id="debug">
                  <!-- Debug Start-->
                 <div id="mem-controls">
-                    Instruction: <input id='instr' class="input-text" type="text" disabled></input>
+                    Instruction: <input title="$00" id='instr' class="input-text" type="text" disabled></input>
                     Address: $<input id="mem-from" class="input-text" type="text" value="0000" />
                     Count: <input id="mem-count" class="input-text" type="text" value="256" onkeypress="return event.charCode >= 48 && event.charCode <= 57"/>
                 </div>
@@ -98,12 +93,12 @@ HELLO
                 <!-- Object Code Dump Start -->
                 <div id="objcode-dump">
                     <div style="text-align: center;">Object Code</div>
-                    <pre id="object-output"></pre>
+                    <pre id="object-output" onclick="this.select();"></pre>
                 </div>
                 <!-- Object Code Dump End -->
             </div>
             
         </div>
-       
+       <div id="footer">&copy; 2015 Felipe Alfonso - <a href="https://github.com/damnbrain/6502.js" target="_blank">Source</a></div>
     </body>
 </html>

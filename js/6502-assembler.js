@@ -849,11 +849,13 @@
         objectCodeDump = function (objectCode) {
             var index,
                 str = '',
-                len = objectCode.length;
+                len = objectCode.length,
+                col = 0;
             for (index = 0; index < len; ++index) {
                 str += dec8ToHex(objectCode[index]) + ' ';
-                if (index > 0 && index % 16 == 0) {
+                if (++col > 15) {
                     str += '\n';
+                    col = 0;
                 }
             }
             return str;

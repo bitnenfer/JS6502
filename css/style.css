@@ -1,0 +1,160 @@
+/*
+ *   6502 JavaScript Emulator and Assembler
+ *   http://damnbrain.com/
+ *
+ *   The MIT License (MIT)
+ *   
+ *   Copyright (c) 2015 Felipe Alfonso
+ *   
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
+ *   
+ *   The above copyright notice and this permission notice shall be included in all
+ *   copies or substantial portions of the Software.
+ *   
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
+ *
+ */
+
+
+@font-face {
+    font-family: C64;
+    src: url(../data/c64.ttf);
+} 
+
+#footer {
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 24px;
+    position:absolute;
+    padding-top: 10px;
+    background-color: #7e8b9e;
+    color: #eeeeee;
+}
+
+#canvas-container {
+    width: 650px;
+    overflow: hidden;
+    margin-left: -80px;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: monospace;
+    text-align: center;
+    background-color: #7e8b9e;
+}
+
+.source-code {
+    outline: none; 
+    resize: none; 
+    border:0px; 
+    font-family: 'C64'; 
+    font-weight: 400; 
+    font-size: 12px;
+    color: #65abff; 
+    background-color:#0041a3; 
+    overflow-y: auto; 
+    height:318px; 
+    width: 320px;
+    float:left;
+    margin-left: 2px;
+    text-transform: uppercase;
+}
+
+.center {
+    width: 500px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.button {
+    width: 100px;
+}
+
+.input-text {
+    width: 50px;
+    background-color: #8e9bAe;
+    outline: none;
+    border: none;
+    color: #000;
+
+}
+
+#buttons {
+    text-align: center;
+    width: 320px;
+    margin-left: 80px;
+}
+
+#error-output {
+    height: 20px;
+    color: red;
+    text-align: left;
+    background-color: #fff;
+}
+
+#register-output {
+    float: left;
+    text-align: left;
+    width: 100px;
+    height: 90px;
+    border: 1px solid;
+    background-color: #fff;
+}
+
+#memory-output {
+    border: 1px solid;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 370px;
+    height: 90px;
+    float: right;
+    text-align:left;
+    padding-left: 10px;
+    background-color: #fff;
+}
+
+#mem-controls {
+    text-align: right;
+}
+
+#object-output {
+    border: 1px solid;
+    overflow-y: auto;
+    overflow-x: hidden;
+    width: 370px;
+    height: 90px;
+    float: right;
+    text-align:left;
+    padding-left: 10px;
+    background-color: #fff; 
+}
+
+#canvas {
+    border: 1px solid #000;
+    outline: none;
+    margin: 0px auto;
+    display: block;
+    image-rendering: pixelated;
+    -ms-interpolation-mode: nearest-neighbor;
+    overflow: hidden; 
+    float: left;
+}
+
+a {
+    color: #fff;
+}
