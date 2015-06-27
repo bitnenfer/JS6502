@@ -644,7 +644,9 @@
                                     var token = peek(0);
                                     while (!eof(0) && token != null &&
                                         token.type != 'mnemonic' &&
-                                        token.type != 'label' && token.type != '\n') {
+                                        token.type != 'label'  &&
+                                        token.type != 'label_dec'  &&
+                                        token.type != '\n') {
 
                                         if (token.type == 'address_hex') {
                                             token.value = parseInt(token.value, 16);
