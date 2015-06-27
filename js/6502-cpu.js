@@ -1128,6 +1128,7 @@
                             ++count;
                         }
                     } else {
+                        shouldStop = true;
                         logData.push('Program terminated at $' + dec16ToHex(PC));
                         break;
                     }                    

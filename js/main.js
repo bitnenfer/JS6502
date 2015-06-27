@@ -515,7 +515,8 @@
                 '- Text memory starts at $0600 and ends at $09FF.<br>' +
                 '- Background color is defined at address $E400.<br>' +
                 '- Text color is defined at address $E401.<br>' +
-                '- Color values go from $0 to $F.<br></div>');
+                '- Color values go from $0 to $F.<br>' +
+                '- Input address is $E300.<br></div>');
             w.document.title = '6502 Emulator Specs';
             w.document.close();
         };
