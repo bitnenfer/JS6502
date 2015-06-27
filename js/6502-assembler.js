@@ -634,7 +634,7 @@
                                         }
                                         sequence.push(seq);                                      
                                     } else {
-                                        throw 'Incorrect macro definition of ' + token.value;
+                                        throw 'Incorrect label definition of ' + token.value + '. Add colon (:) to the end.';
                                     }
                                 } else if (token.type == 'directive') {
                                     seq.type = 'directiveuse';
@@ -776,6 +776,7 @@
                                     var b = [];
                                     b.push((labels[token.value] / 256) | 0);
                                     b.push((labels[token.value] & 255) | 0);
+                                    console.log(b);
                                     return b;
                                 } else {
                                     return (labels[token.value] - objectCode.length - 1) & 0xFF;

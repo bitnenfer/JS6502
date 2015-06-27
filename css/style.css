@@ -32,6 +32,12 @@
     src: url(../data/c64.ttf);
 } 
 
+#wrapper {
+    left: 30%;
+    width: 500px;
+    display: block;
+}
+
 #footer {
     bottom: 0;
     left: 0;
@@ -46,7 +52,7 @@
 #canvas-container {
     width: 850px;
     overflow: hidden;
-    margin-left: -80px;
+    margin-left: -160px;
 }
 
 body {
@@ -97,14 +103,18 @@ body {
 #buttons {
     text-align: center;
     width: 320px;
-    margin-left: 80px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 #error-output {
     height: 20px;
     color: red;
-    text-align: left;
+    text-align: center;
     background-color: #fff;
+    width: 600px;
+    margin-left: -50px;
+    margin-right: auto;
 }
 
 #register-output {
@@ -130,6 +140,7 @@ body {
 
 #mem-controls {
     text-align: right;
+
 }
 
 #object-output {
