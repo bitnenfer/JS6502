@@ -3,19 +3,19 @@
  *   http://damnbrain.com/
  *
  *   The MIT License (MIT)
- *   
+ *
  *   Copyright (c) 2015 Felipe Alfonso
- *   
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- *   
+ *
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- *   
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -214,11 +214,18 @@
                                         type: 'register',
                                         value: str
                                     });
-                                } else if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',')) {
-                                    tokens.push({
-                                        type: 'label',
-                                        value: str
-                                    });
+                                } else if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',' || peek(0) == ':' )) {
+                                    if (peek(0) == ':') {
+                                        tokens.push({
+                                            type: 'label_dec',
+                                            value: str
+                                        });
+                                    } else {
+                                        tokens.push({
+                                            type: 'label',
+                                            value: str
+                                        });
+                                    }
                                 } else {
                                     errors.push('Invalid component ' + str);
                                     break;
@@ -228,10 +235,10 @@
                                 while (!eof(0) && peek(0).search(/( |\t)+/g) >= 0) {
                                     ++index;
                                 }
-                               /* tokens.push({
-                                    type: 'space',
-                                    value: ''
-                                });*/
+                                /* tokens.push({
+                                     type: 'space',
+                                     value: ''
+                                 });*/
                                 --index;
                             } else if (peek(0) == ',') {
                                 tokens.push({
@@ -440,155 +447,155 @@
                         var arr = [],
                             token = peek(0);
                         switch (mode) {
-                            case 'IMM':
-                                if (token != null) {
-                                    if (token.type == 'immediate_hex') {
-                                        token.value = parseInt(token.value, 16);
-                                        arr.push(token);
-                                    } else if (token.type == 'immediate_dec') {
-                                        token.value = parseInt(token.value);
-                                        arr.push(token);
-                                    }
+                        case 'IMM':
+                            if (token != null) {
+                                if (token.type == 'immediate_hex') {
+                                    token.value = parseInt(token.value, 16);
+                                    arr.push(token);
+                                } else if (token.type == 'immediate_dec') {
+                                    token.value = parseInt(token.value);
+                                    arr.push(token);
+                                }
+                            }
+                            return arr;
+                        case 'AB':
+                            if (token.type == 'label') {
+                                arr.push(token);
+                                return arr;
+                            }
+                        case 'ZP':
+                            if (token != null && token.type == 'address_hex') {
+                                token.value = parseInt(token.value, 16);
+                                arr.push(token);
+                                return arr;
+                            } else {
+                                throw 'Invalid address';
+                            }
+                            break;
+                        case 'ABX':
+                        case 'ABY':
+                            if (token.type == 'label') {
+                                arr.push(token);
+                                index += 2;
+                                token = peek(0);
+                                if (token != null && token.type == 'register') {
+                                    arr.push(token);
                                 }
                                 return arr;
-                            case 'AB':
-                                if (token.type == 'label') {
+                            }
+                        case 'ZPY':
+                        case 'ZPX':
+                            if (token != null && token.type == 'address_hex') {
+                                token.value = parseInt(token.value, 16);
+                                arr.push(token);
+                                index += 2;
+                                token = peek(0);
+                                if (token != null && token.type == 'register') {
                                     arr.push(token);
-                                    return arr;
                                 }
-                            case 'ZP':
+                                return arr;
+                            } else {
+                                throw 'Invalid address';
+                            }
+                            break;
+                        case 'IND':
+                            if (token != null && token.type == 'lparen') {
+                                ++index;
+                                token = peek(0);
                                 if (token != null && token.type == 'address_hex') {
                                     token.value = parseInt(token.value, 16);
                                     arr.push(token);
-                                    return arr;
+                                } else if (token != null && token.type == 'label') {
+                                    arr.push(token);
                                 } else {
                                     throw 'Invalid address';
                                 }
-                                break;
-                            case 'ABX':
-                            case 'ABY':
-                                if (token.type == 'label') {
-                                    arr.push(token);
-                                    index += 2;
-                                    token = peek(0);
-                                    if (token != null && token.type == 'register') {
-                                        arr.push(token);
-                                    }
-                                    return arr;
+                                ++index;
+                                token = peek(0);
+                                if (token == null || token.type != 'rparen') {
+                                    throw 'Invalid address. Missing right paren.';
                                 }
-                            case 'ZPY':
-                            case 'ZPX':
-                                if (token != null && token.type == 'address_hex') {
-                                    token.value = parseInt(token.value, 16);
-                                    arr.push(token);
-                                    index += 2;
-                                    token = peek(0);
-                                    if (token != null && token.type == 'register') {
-                                        arr.push(token);
-                                    }
-                                    return arr;
-                                } else {
-                                    throw 'Invalid address';
-                                }
-                                break;
-                            case 'IND':
-                                if (token != null && token.type == 'lparen') {
-                                    ++index;
-                                    token = peek(0);
-                                    if (token != null && token.type == 'address_hex') {
+                                return arr;
+                            }
+                            break;
+                        case 'IDX':
+                            if (token != null && token.type == 'lparen') {
+                                ++index;
+                                token = peek(0);
+                                if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
+                                    if (token.type == 'address_hex') {
                                         token.value = parseInt(token.value, 16);
+                                    }
+                                    arr.push(token);
+                                    index += 1;
+                                    token = peek(0);
+                                    if (token == null || token.type != 'comma') {
+                                        throw 'Invalid address. Missing comma.'
+                                    }
+                                    index += 1;
+                                    token = peek(0);
+                                    if (token != null && token.type == 'register') {
                                         arr.push(token);
-                                    } else if (token != null && token.type == 'label') {
-                                        arr.push(token);
-                                    } else {
-                                        throw 'Invalid address';
                                     }
                                     ++index;
                                     token = peek(0);
                                     if (token == null || token.type != 'rparen') {
-                                        throw 'Invalid address. Missing right paren.';
+                                        throw 'Invalid address. Missing right paren.'
                                     }
                                     return arr;
+                                } else {
+                                    throw 'Invalid address';
                                 }
-                                break;
-                            case 'IDX':
-                                if (token != null && token.type == 'lparen') {
-                                    ++index;
+                            } else {
+                                throw 'Invalid address missing left paren';
+                            }
+                            break;
+                        case 'IDY':
+                            if (token != null && token.type == 'lparen') {
+                                ++index;
+                                token = peek(0);
+                                if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
+                                    if (token.type == 'address_hex') {
+                                        token.value = parseInt(token.value, 16);
+                                    }
+                                    arr.push(token);
+                                    index += 1;
                                     token = peek(0);
-                                    if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
-                                        if (token.type == 'address_hex') {
-                                            token.value = parseInt(token.value, 16);
-                                        }
+                                    if (token == null || token.type != 'rparen') {
+                                        throw 'Invalid address. Missing right paren.'
+                                    }
+                                    index += 1;
+                                    token = peek(0);
+                                    if (token == null || token.type != 'comma') {
+                                        throw 'Invalid address. Missing comma.'
+                                    }
+                                    index += 1;
+                                    token = peek(0);
+                                    if (token != null && token.type == 'register') {
                                         arr.push(token);
-                                        index += 1;
-                                        token = peek(0);
-                                        if (token == null || token.type != 'comma') {
-                                            throw 'Invalid address. Missing comma.'
-                                        }
-                                        index += 1;
-                                        token = peek(0);
-                                        if (token != null && token.type == 'register') {
-                                            arr.push(token);
-                                        }
-                                        ++index;
-                                        token = peek(0);
-                                        if (token == null || token.type != 'rparen') {
-                                            throw 'Invalid address. Missing right paren.'
-                                        }
-                                        return arr;
                                     } else {
                                         throw 'Invalid address';
                                     }
-                                } else {
-                                    throw 'Invalid address missing left paren';
-                                }
-                                break;
-                            case 'IDY':
-                                if (token != null && token.type == 'lparen') {
-                                    ++index;
-                                    token = peek(0);
-                                    if (token != null && (token.type == 'address_hex' || token.type == 'label')) {
-                                        if (token.type == 'address_hex') {
-                                            token.value = parseInt(token.value, 16);
-                                        }
-                                        arr.push(token);
-                                        index += 1;
-                                        token = peek(0);
-                                        if (token == null || token.type != 'rparen') {
-                                            throw 'Invalid address. Missing right paren.'
-                                        }
-                                        index += 1;
-                                        token = peek(0);
-                                        if (token == null || token.type != 'comma') {
-                                            throw 'Invalid address. Missing comma.'
-                                        }
-                                        index += 1;
-                                        token = peek(0);
-                                        if (token != null && token.type == 'register') {
-                                            arr.push(token);
-                                        } else {
-                                            throw 'Invalid address';
-                                        }
-                                        return arr;
-                                    } else {
-                                        throw 'Invalid address';
-                                    }
-                                } else {
-                                    throw 'Invalid address missing left paren';
-                                }
-                                break;
-                            case 'IMP':
-                                return [];
-                            case 'A':
-                                if (token != null && token.type == 'register' && token.value == 'A') {
-                                    arr.push(token);
                                     return arr;
+                                } else {
+                                    throw 'Invalid address';
                                 }
-                            case 'REL':
-                                if (token != null && token.type == 'label') {
-                                    arr.push(token);
-                                    return arr;
-                                }
+                            } else {
+                                throw 'Invalid address missing left paren';
+                            }
+                            break;
+                        case 'IMP':
+                            return [];
+                        case 'A':
+                            if (token != null && token.type == 'register' && token.value == 'A') {
+                                arr.push(token);
+                                return arr;
+                            }
+                        case 'REL':
+                            if (token != null && token.type == 'label') {
+                                arr.push(token);
+                                return arr;
+                            }
 
                         }
                         throw 'Invalid address mode ' + mode;
@@ -604,14 +611,31 @@
                                     ++index;
                                     seq.mode = getAddressingMode();
                                     seq.args = getAddressValue(seq.mode);
-                                    if (seq.opCode != 'NOP') {                                    
+                                    if (seq.opCode != 'NOP') {
                                         sequence.push(seq);
                                     }
-                                } else if (token.type == 'label') {
+                                } else if (token.type == 'label_dec') {
                                     seq.type = 'labeling';
                                     seq.labelName = token.value;
                                     seq.args = [];
                                     sequence.push(seq);
+                                } else if (token.type == 'label') {
+                                    if (!eof(1) && peek(1).type == 'equal') {
+                                        seq.type = 'macro_def';
+                                        seq.macroName = token.value;
+                                        seq.args = [];
+                                        index += 2;
+                                        if (peek(0) != null && peek(0).type == 'address_hex') {
+                                            token = peek(0);
+                                            token.value = parseInt(token.value, 16);
+                                            seq.args.push(token);
+                                        } else {
+                                            throw 'Incorrect type of address.';
+                                        }
+                                        sequence.push(seq);                                      
+                                    } else {
+                                        throw 'Incorrect macro definition of ' + token.value;
+                                    }
                                 } else if (token.type == 'directive') {
                                     seq.type = 'directiveuse';
                                     seq.directiveName = token.value;
@@ -619,9 +643,9 @@
                                     ++index;
                                     var token = peek(0);
                                     while (!eof(0) && token != null &&
-                                            token.type != 'mnemonic' && 
-                                            token.type != 'label' && token.type != '\n') {
-                                                
+                                        token.type != 'mnemonic' &&
+                                        token.type != 'label' && token.type != '\n') {
+
                                         if (token.type == 'address_hex') {
                                             token.value = parseInt(token.value, 16);
                                         } else if (token.type == 'immediate_dec') {
@@ -652,7 +676,7 @@
                                         throw 'Missing assignment of start address.';
                                     }
                                 } else if (token.type != 'newline') {
-                                    throw 'Invalid token "' + token.type + '" at address ' + index;
+                                    throw 'Invalid token "' + token.value + '" at address ' + index;
                                 }
                                 ++index;
                             }
@@ -660,11 +684,11 @@
                             throw 'invalid token stream';
                         }
                     };
-                    
+
                 return {
                     getSequence: function () {
                         parse();
-                        return sequence;    
+                        return sequence;
                     }
                 };
             };
@@ -674,10 +698,12 @@
                 var index = 0,
                     labels = {},
                     objectCode = [],
+                    macros = {},
+                    origins = [],
                     eof = function (step) {
                         return (index + step >= sequence.length);
                     },
-                    peek = function(step) {
+                    peek = function (step) {
                         if (!eof(step)) {
                             return sequence[index + step];
                         }
@@ -701,7 +727,7 @@
                             } else if (tok.type == 'label') {
                                 if (branchNmemonics.indexOf(opcode) < 0) {
                                     size += 2;
-                                } else if (branchNmemonics.indexOf(opcode) >= 0){
+                                } else if (branchNmemonics.indexOf(opcode) >= 0) {
                                     size += 1;
                                 }
                             }
@@ -713,6 +739,10 @@
                             addr = 0,
                             oc;
                         for (idx = 0; idx < sequence.length; ++idx) {
+                            if (sequence[idx].type == 'macro_def') {
+                                macros[sequence[idx].macroName] = sequence[idx].args[0].value;
+                                continue;
+                            }
                             if (sequence[idx].type == 'op') {
                                 oc = sequence[idx].opCode;
                             } else {
@@ -724,20 +754,19 @@
                             } else if (sequence[idx].type != 'directiveuse') {
                                 ++addr;
                             }
-                            
                         }
                     },
                     resolveByte = function (token, opcode) {
-                        if (token.type == 'address_hex' || 
+                        if (token.type == 'address_hex' ||
                             token.type == 'immediate_dec' ||
-                            token.type == 'immediate_hex' ) {
+                            token.type == 'immediate_hex') {
                             if (token.value > 0xFF) {
                                 var b = [];
                                 b.push((token.value / 256) | 0);
                                 b.push((token.value & 255) | 0);
                                 return b;
                             }
-                            return token.value;    
+                            return token.value;
                         } else if (token.type == 'register') {
                             // null value shouldn't be added to the oc
                             return null;
@@ -750,6 +779,15 @@
                                     return b;
                                 } else {
                                     return (labels[token.value] - objectCode.length - 1) & 0xFF;
+                                }
+                            } else if (token.value in macros) {
+                                 if (branchNmemonics.indexOf(opcode) < 0) {
+                                    var b = [];
+                                    b.push((macros[token.value] / 256) | 0);
+                                    b.push((macros[token.value] & 255) | 0);
+                                    return b;
+                                } else {
+                                    throw 'Invalid addressing';
                                 }
                             }
                             throw 'There is no ' + token.value + ' identifier.';
@@ -766,7 +804,7 @@
                                 throw 'Invalid Op Code ' + opcode;
                             }
                         } else {
-                            throw 'Invalid address mode '+ addrmode +' for opcode ' + opcode;
+                            throw 'Invalid address mode ' + addrmode + ' for opcode ' + opcode;
                         }
                     },
                     gen = function () {
@@ -793,7 +831,7 @@
                                         }
                                     }
                                 } else {
-                                    throw 'Invalid OpCode '+ seq.opCode +' with address mode ' + seq.mode;
+                                    throw 'Invalid OpCode ' + seq.opCode + ' with address mode ' + seq.mode;
                                 }
                             } else if (seq.type == 'directiveuse') {
                                 if (seq.args.length > 0) {
@@ -812,21 +850,28 @@
                                     throw 'Not enough arguments for directive.';
                                 }
                             } else if (seq.type == 'originset') {
-                                //TODO: Implement origin
-                            } else if (seq.type != 'labeling') {
+                                throw 'No pointer setting supported.';
+                                //console.log(seq);
+                                //origins.push([objectCode.length, seq.args[0].value]);
+                            } else if (seq.type != 'labeling' && seq.type != 'macro_def' && seq.type != 'originset') {
                                 throw 'Invalid sequence of type ' + seq.type;
                             }
                             ++index;
                         }
                     };
-                    
+
                 return {
                     getObjectCode: function () {
                         if (sequence instanceof Array) {
                             if (sequence.length > 0) {
                                 readLables();
                                 gen();
-                                return objectCode;
+                                if (origins.length == 0) {
+                                    origins.push([0, 0]);
+                                } else if (origins[0][0] > 0) {
+                                    origins.unshift([0, 0]);
+                                }
+                                return [objectCode, origins];
                             } else {
                                 throw 'Empty program.';
                             }
@@ -860,7 +905,7 @@
             }
             return str;
         };
-        
+
     ASM6502.processSource = function (source) {
         var tokens, sequence, objectCode;
         lexer = Lexer(source);

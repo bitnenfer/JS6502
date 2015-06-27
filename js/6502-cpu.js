@@ -1140,12 +1140,20 @@
             }
         },
         burnProgramAt = function (src, address) {
+            if (!src) return;
             var index,
-                len = src.length;
+                len = src[0].length,
+                offset = 0,
+                currentMemPos = 0,
+                count = 0;
             for (index = 0; index < len; ++index) {
-                RAM[address + index] = src[index];
+                if (currentMemPos < src[1].length && index >= src[1][currentMemPos][0]) {
+                    offset = src[1][currentMemPos++][1];
+                    count = 0;
+                }
+                RAM[offset + (count++)] = src[0][index];                
             }
-            PC = address;
+            PC = src[1][0][1];
         },
         registerDumpData = '',
         CPU6502 = {},
