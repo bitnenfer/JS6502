@@ -484,7 +484,8 @@
             checkMemoryLimits();
         },
         onBtnDump = function (e) {
-            objOutput.innerHTML = ASM6502.dumpObjectCodeToHex(objectCode);
+            objOutput.innerHTML = ASM6502.dumpObjectCodeToHex(objectCode[0]);
+            document.getElementById('size').innerHTML = objectCode[0].length + ' BYTES';
         },
         onButtonPause = function (e) {
             CPU6502.pause();
