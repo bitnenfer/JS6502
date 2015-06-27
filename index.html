@@ -1,104 +1,110 @@
 <!--
-    6502 JavaScript Emulator and Assembler
-    http://damnbrain.com/
+	6502 JavaScript Emulator and Assembler
+	http://damnbrain.com/
  
-    The MIT License (MIT)
-    
-    Copyright (c) 2015 Felipe Alfonso
-    
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-    
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
-    
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+	The MIT License (MIT)
+	
+	Copyright (c) 2015 Felipe Alfonso
+	
+	Permission is hereby granted, free of charge, to any person obtaining a copy
+	of this software and associated documentation files (the "Software"), to deal
+	in the Software without restriction, including without limitation the rights
+	to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+	copies of the Software, and to permit persons to whom the Software is
+	furnished to do so, subject to the following conditions:
+	
+	The above copyright notice and this permission notice shall be included in all
+	copies or substantial portions of the Software.
+	
+	THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+	IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+	FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+	AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+	LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+	OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+	SOFTWARE.
 -->
 <!DOCTYPE html>
 <html>
-    <head>
-        <title>6502 Emulator and Assembler</title>
-        <script type="text/javascript" src="js/typedarrays.js"></script>
-        <script type="text/javascript" src="js/6502-cpu.js"></script>
-        <script type="text/javascript" src="js/6502-assembler.js"></script>
-        <script type="text/javascript" src="js/main.js"></script>
-        <script type="text/javascript" src="js/canvas.js"></script>
-        <script type="text/javascript" src="js/input.js"></script>
-        <link href='//fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
-        <link rel="stylesheet" href="css/style.css" type="text/css" />
-    </head>
-    <body>
-        <div id="wrapper" class="center">
-        <pre id="error-output"></pre>
-            <div id="canvas-container">
-                <canvas id="canvas" width="320" height="320" tabindex=1></canvas>
-                <textarea id="source" class="source-code" spellcheck='false' autofocus>
-    LDA #$03
-    STA $E401
-    LDA HELLO
-    
-PRINTF
-    STA $01C0, X
-    STA $0600, X ;TEXT BUFFER
-    INX
-    LDA HELLO, X
-    CMP #$00
-    BNE PRINTF
-    BRK
+	<head>
+		<title>6502 Emulator and Assembler</title>
+		<script type="text/javascript" src="js/typedarrays.js"></script>
+		<script type="text/javascript" src="js/6502-cpu.js"></script>
+		<script type="text/javascript" src="js/6502-assembler.js"></script>
+		<script type="text/javascript" src="js/main.js"></script>
+		<script type="text/javascript" src="js/canvas.js"></script>
+		<script type="text/javascript" src="js/input.js"></script>
+		<link href='//fonts.googleapis.com/css?family=VT323' rel='stylesheet' type='text/css'>
+		<link rel="stylesheet" href="css/style.css" type="text/css" />
+	</head>
+	<body>
+		<div id="wrapper" class="center">
+		<pre id="error-output"></pre>
+			<div id="canvas-container">
+				<canvas id="canvas" width="320" height="320" tabindex=1></canvas>
+				<textarea id="source" class="source-code" spellcheck='false' autofocus>
+;THIS IS A SIMPLE HELLO WORLD
+;IT ALSO PLOTS PIXELS IN SCREEN
 
-HELLO
-    .BYTE "HELLO 6502!", $0D, 
-    "I AM PRINTING IN",$0D, 
-    "THE SCREEN",
-    $00, $9B
-                </textarea>
-            </div>
-            <!-- Editor Start -->
-            <div id="editor-container">
-                <div id="buttons">
-                    <input title="Assemble Program" id="btn-asm" class="button" type="button" value="ASSEMBLE" />
-                    <input title="Run Object Code" id="btn-run" class="button" type="button" value="RUN" />
-                    <input title="Stop Execution" id="btn-pause" class="button" type="button" value="STOP"/>
-                    <input title="Reset Registers and Memory" id="btn-reset" class="button" type="button" value="RESET" />
-                    <input title="Step to Next Instruction" id="btn-step" class="button" type="button" value="STEP" />
-                    <input title="Dump Object Code" id="btn-dump" class="button" type="button" value="OBJ CODE" />
-                </div>
-                DEBUG:
-                <input id="btn-debug" type="checkbox" checked="true" /><br>
-            </div>
-            <br>
-            <!-- Editor End-->
-            <div id="debug">
-                 <!-- Debug Start-->
-                <div id="mem-controls">
-                    Instruction: <input title="$00" id='instr' class="input-text" type="text" disabled></input>
-                    Address: $<input id="mem-from" class="input-text" type="text" value="0000" />
-                    Count: <input id="mem-count" class="input-text" type="text" value="256" onkeypress="return event.charCode >= 48 && event.charCode <= 57"/>
-                </div>
-                <div id="debug-container">
-                    <pre id="register-output"></pre>
-                    <pre id="memory-output"></pre>
-                </div>
-                <!-- Debug End-->
-                <!-- Object Code Dump Start -->
-                <div id="objcode-dump">
-                    <div style="text-align: center;">Object Code</div>
-                    <pre id="object-output" onclick="this.select();"></pre>
-                </div>
-                <!-- Object Code Dump End -->
-            </div>
-            
-        </div>
-       <div id="footer">&copy; 2015 Felipe Alfonso - <a href="https://github.com/damnbrain/6502.js" target="_blank">Source</a> | <a onclick="showSpecsPopup();" href="#">Emulator Specs</a></div>
-    </body>
+TXTCLR = $E401
+TXTADDR = $0600
+PXLADDR = $01C0
+
+	LDA #$03
+	STA TXTCLR
+	LDA HELLO
+	
+PRINTF:
+	STA PXLADDR, X
+	STA TXTADDR, X
+	INX
+	LDA HELLO, X
+	CMP #$00
+	BNE PRINTF
+	BRK
+HELLO:
+	.BYTE "HELLO 6502!", $0D, 
+	"I AM PRINTING IN",$0D, 
+	"THE SCREEN",
+	$00, $9B
+				</textarea>
+			</div>
+			<!-- Editor Start -->
+			<div id="editor-container">
+				<div id="buttons">
+					<input title="Assemble Program" id="btn-asm" class="button" type="button" value="ASSEMBLE" />
+					<input title="Run Object Code" id="btn-run" class="button" type="button" value="RUN" />
+					<input title="Stop Execution" id="btn-pause" class="button" type="button" value="STOP"/>
+					<input title="Reset Registers and Memory" id="btn-reset" class="button" type="button" value="RESET" />
+					<input title="Step to Next Instruction" id="btn-step" class="button" type="button" value="STEP" />
+					<input title="Dump Object Code" id="btn-dump" class="button" type="button" value="OBJ CODE" />
+				</div>
+				DEBUG:
+				<input id="btn-debug" type="checkbox" checked="true" /><br>
+			</div>
+			<br>
+			<!-- Editor End-->
+			<div id="debug">
+				 <!-- Debug Start-->
+				<div id="mem-controls">
+					Instruction: <input title="$00" id='instr' class="input-text" type="text" disabled></input>
+					Address: $<input id="mem-from" class="input-text" type="text" value="0000" />
+					Count: <input id="mem-count" class="input-text" type="text" value="256" onkeypress="return event.charCode >= 48 && event.charCode <= 57"/>
+				</div>
+				<div id="debug-container">
+					<pre id="register-output"></pre>
+					<pre id="memory-output"></pre>
+				</div>
+				<!-- Debug End-->
+				<!-- Object Code Dump Start -->
+				<div id="objcode-dump">
+					<div style="text-align: center;">Object Code</div>
+					<pre id="object-output" onclick="this.select();"></pre>
+				</div>
+				<!-- Object Code Dump End -->
+			</div>
+			
+		</div>
+	   <div id="footer">&copy; 2015 Felipe Alfonso - <a href="https://github.com/damnbrain/6502.js" target="_blank">Source</a> | <a onclick="showSpecsPopup();" href="#">Emulator Specs</a></div>
+	</body>
 </html>
