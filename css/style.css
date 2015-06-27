@@ -44,7 +44,7 @@
 }
 
 #canvas-container {
-    width: 650px;
+    width: 850px;
     overflow: hidden;
     margin-left: -80px;
 }
@@ -68,7 +68,7 @@ body {
     background-color:#0041a3; 
     overflow-y: auto; 
     height:318px; 
-    width: 320px;
+    width: 500px;
     float:left;
     margin-left: 2px;
     text-transform: uppercase;
