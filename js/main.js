@@ -3,19 +3,19 @@
  *   http://damnbrain.com/
  *
  *   The MIT License (MIT)
- *   
+ *
  *   Copyright (c) 2015 Felipe Alfonso
- *   
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- *   
+ *
  *   The above copyright notice and this permission notice shall be included in all
  *   copies or substantial portions of the Software.
- *   
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -373,7 +373,7 @@
         assembleSourceCode = function () {
             errorOutputTag.innerHTML = '';
             try {
-                objectCode = ASM6502.processSource(codeTag.value.toUpperCase());
+                objectCode = ASM6502.processSource((codeTag.value + '\n').toUpperCase());
                 btnRun.disabled = false;
                 btnDump.disabled = false;
                 errorOutputTag.innerHTML = 'Correctly assembled.';
@@ -419,7 +419,7 @@
             setTimeout(updateRegisterData, 16);
             var log = CPU6502.popLog(),
                 ins = CPU6502.currentInstruction();
-            
+
             instrInput.value = ins in mnemonics ? mnemonics[ins] : 'NOP';
             instrInput.title = ins in mnemonics ? dec8ToHex(ins) : '$EA';
             if (log) {
@@ -441,13 +441,13 @@
             if (e.keyCode == 9) {
                 e.preventDefault();
                 var s = this.selectionStart;
-                this.value = this.value.substring(0,this.selectionStart) + "\t" + this.value.substring(this.selectionEnd);
-                this.selectionEnd = s+1; 
+                this.value = this.value.substring(0, this.selectionStart) + "\t" + this.value.substring(this.selectionEnd);
+                this.selectionEnd = s + 1;
             }
         },
         onKeyUpInEditor = function (e) {
             saveSourceCode();
-            assembleSourceCode();  
+            assembleSourceCode();
         },
         onButtonDebug = function (e) {
             debugFlag = btnDebug.checked;
@@ -487,10 +487,10 @@
             objOutput.innerHTML = ASM6502.dumpObjectCodeToHex(objectCode);
         },
         onButtonPause = function (e) {
-            CPU6502.pause();  
+            CPU6502.pause();
         },
         onButtonStep = function (e) {
-            CPU6502.step();  
+            CPU6502.step();
         },
         setEventHandlers = function () {
             btnAsm.addEventListener('click', onButtonAssemble);
@@ -505,8 +505,20 @@
             btnPause.addEventListener('click', onButtonPause);
             btnStep.addEventListener('click', onButtonStep);
             updateRegisterData();
+        },
+        showSpecsPopup = function () {
+            var w = window.open('', '', 'width=400,height=150');
+            w.document.write('<div style="font-family:Verdana;font-size:12px;"><b><u>Specs:</u></b><br>' +
+                '- 64 KB of memory.<br>' +
+                '- Screen memory starts at $0100 and ends at $04FF.<br>' +
+                '- Text memory starts at $0600 and ends at $09FF.<br>' +
+                '- Background color is defined at address $E400.<br>' +
+                '- Text color is defined at address $E401.<br>' +
+                '- Color values go from $0 to $F.<br></div>');
+            w.document.title = '6502 Emulator Specs';
+            w.document.close();
         };
-    
+    scope.showSpecsPopup = showSpecsPopup;
     scope.addEventListener('load', function () {
         codeTag = document.getElementById('source');
         errorOutputTag = document.getElementById('error-output');
@@ -531,8 +543,14 @@
         setEventHandlers();
         restoreSourceCode();
         assembleSourceCode();
-        window.addEventListener('keydown', function (e){
+        window.addEventListener('keydown', function (e) {
+            if(e.keyCode == 83 && (navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey) ) {
+                onButtonAssemble();
+                e.preventDefault();
+                return false;
+            }
             if (e.keyCode == 8) {
+                if (!allowHotkeys) return;
                 e.preventDefault();
             }
 
@@ -543,5 +561,6 @@
         codeTag.addEventListener('blur', function (e) {
             allowHotkeys = true;
         });
+
     });
 }(window));

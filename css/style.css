@@ -155,6 +155,13 @@ body {
     float: left;
 }
 
+#specs {
+    overflow: hidden; 
+    float: left;
+    width: 300px;
+    text-align: left;
+}
+
 a {
     color: #fff;
 }
