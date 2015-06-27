@@ -778,7 +778,6 @@
                                     var b = [];
                                     b.push((labels[token.value] / 256) | 0);
                                     b.push((labels[token.value] & 255) | 0);
-                                    console.log(b);
                                     return b;
                                 } else {
                                     return (labels[token.value] - objectCode.length - 1) & 0xFF;
@@ -787,7 +786,7 @@
                                  if (branchNmemonics.indexOf(opcode) < 0) {
                                     var b = [];
                                     b.push((macros[token.value] / 256) | 0);
-                                    b.push((macros[token.value] & 255) | 0);
+                                    b.push((macros[token.value] & 255) | 0);                                    
                                     return b;
                                 } else {
                                     throw 'Invalid addressing';

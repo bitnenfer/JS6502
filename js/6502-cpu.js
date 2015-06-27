@@ -112,7 +112,7 @@
             var l = PC & 255 | 0,
                 h = PC / 256 | 0,
                 b = eatByte() & 0xFF;
-            PC = (((h << 8 | l) + b) & 0xFF) + 1;
+            PC = (((h << 8 | l) + b + 1) & 0xFF);
         },
         pushStack = function (m) {
             RAM[stackAddress + SP] = m;
