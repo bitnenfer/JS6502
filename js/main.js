@@ -355,14 +355,14 @@
         },
         saveSourceCode = function () {
             try {
-                localStorage.setItem('6502SourceCode2', codeTag.value);
+                localStorage.setItem('6502SourceCode3', codeTag.value);
             } catch (e) {
                 // no access to localStorage.
             }
         },
         restoreSourceCode = function () {
             try {
-                var data = localStorage.getItem('6502SourceCode2');
+                var data = localStorage.getItem('6502SourceCode3');
                 if (data != null) {
                     codeTag.value = data;
                 }
