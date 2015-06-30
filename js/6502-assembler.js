@@ -650,7 +650,7 @@
                                             token.value = parseInt(token.value, 16);
                                             seq.args.push(token);
                                         } else {
-                                            throw 'Incorrect type of address.';
+                                            throw 'Incorrect type of address ' + token.value;
                                         }
                                         sequence.push(seq);
                                     } else {
@@ -804,10 +804,14 @@
                                 }
                             } else if (token.value in macros) {
                                 if (branchNmemonics.indexOf(opcode) < 0) {
-                                    var b = [];
-                                    b.push((macros[token.value] / 256) | 0);
-                                    b.push((macros[token.value] & 255) | 0);
-                                    return b;
+                                    if (macros[token.value] <= 0xFF) {
+                                        return macros[token.value];
+                                    } else {
+                                        var b = [];
+                                        b.push((macros[token.value] / 256) | 0);
+                                        b.push((macros[token.value] & 255) | 0);
+                                        return b;
+                                    }
                                 } else {
                                     throw 'Invalid addressing';
                                 }
@@ -861,7 +865,7 @@
                                                     objectCode.push(b.pop());
                                                     objectCode.push(b.pop());
                                                 } else {
-                                                    throw 'Invalid bit size in argument.';
+                                                    throw 'Invalid bit size in argument of ' + seq.opCode + ' at $' + dec8ToHex(addr) + ' with mode ' + seq.mode;
                                                 }
                                             } else {
                                                 objectCode.push(b);
