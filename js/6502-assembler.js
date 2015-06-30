@@ -197,9 +197,9 @@
                                     type: 'newline',
                                     value: peek(0)
                                 });
-                            } else if (peek(0).search(/[a-zA-Z]/g) >= 0) {
+                            } else if (peek(0).search(/[a-zA-Z_]/g) >= 0) {
                                 var str = '';
-                                while (!eof(0) && peek(0).search(/[a-zA-Z]/g) >= 0) {
+                                while (!eof(0) && peek(0).search(/[a-zA-Z_0-9]/g) >= 0) {
                                     str += peek(0);
                                     ++index;
                                 }
@@ -214,7 +214,7 @@
                                         type: 'register',
                                         value: str
                                     });
-                                } else if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',' || peek(0) == ':' )) {
+                                } else if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0 || peek(0) == ')' || peek(0) == ',' || peek(0) == ':')) {
                                     if (peek(0) == ':') {
                                         tokens.push({
                                             type: 'label_dec',
@@ -270,6 +270,21 @@
                                         type: 'immediate_dec',
                                         value: str
                                     });
+                                } else if (!eof(0) && peek(0).search(/[a-zA-Z_]/g) >= 0) {
+                                    var str = '';
+                                    while (!eof(0) && peek(0).search(/[a-zA-Z_0-9]/g) >= 0) {
+                                        str += peek(0);
+                                        ++index;
+                                    }
+                                    str = str.toUpperCase();
+                                    if (peek(0) != null && (peek(0) == '\n' || peek(0).search(/( |\t)+/g) >= 0)) {
+                                        tokens.push({
+                                            type: 'immediate_label',
+                                            value: str
+                                        });
+                                    } else {
+                                        errors.push('Invalid label ' + str);
+                                    }
                                 } else {
                                     errors.push('Invalid immediate mode.');
                                 }
@@ -436,8 +451,10 @@
                                     return 'IMP';
                                 } else if (token.type == 'label') {
                                     return 'REL';
+                                } else if (token.type == 'immediate_label') {
+                                    return 'IMM';
                                 } else {
-                                    throw 'Incorrect addressing mode';
+                                    throw 'Incorrect addressing mode ' + token.value;
                                 }
                             }
                         }
@@ -455,6 +472,9 @@
                                 } else if (token.type == 'immediate_dec') {
                                     token.value = parseInt(token.value);
                                     arr.push(token);
+                                } else if (token.type == 'immediate_label') {
+                                    arr.push(token);
+                                    return arr;
                                 }
                             }
                             return arr;
@@ -632,7 +652,7 @@
                                         } else {
                                             throw 'Incorrect type of address.';
                                         }
-                                        sequence.push(seq);                                      
+                                        sequence.push(seq);
                                     } else {
                                         throw 'Incorrect label definition of ' + token.value + '. Add colon (:) to the end.';
                                     }
@@ -644,8 +664,8 @@
                                     var token = peek(0);
                                     while (!eof(0) && token != null &&
                                         token.type != 'mnemonic' &&
-                                        token.type != 'label'  &&
-                                        token.type != 'label_dec'  &&
+                                        token.type != 'label' &&
+                                        token.type != 'label_dec' &&
                                         token.type != '\n') {
 
                                         if (token.type == 'address_hex') {
@@ -783,16 +803,32 @@
                                     return (labels[token.value] - objectCode.length - 1) & 0xFF;
                                 }
                             } else if (token.value in macros) {
-                                 if (branchNmemonics.indexOf(opcode) < 0) {
+                                if (branchNmemonics.indexOf(opcode) < 0) {
                                     var b = [];
                                     b.push((macros[token.value] / 256) | 0);
-                                    b.push((macros[token.value] & 255) | 0);                                    
+                                    b.push((macros[token.value] & 255) | 0);
                                     return b;
                                 } else {
                                     throw 'Invalid addressing';
                                 }
                             }
                             throw 'There is no ' + token.value + ' identifier.';
+                        } else if (token.type == 'immediate_label') {
+                            if (token.value in macros) {
+                                if (branchNmemonics.indexOf(opcode) < 0) {
+                                    if (macros[token.value] <= 0xFF) {
+                                        return macros[token.value];
+                                    } else {
+                                        var b = [];
+                                        b.push((macros[token.value] / 256) | 0);
+                                        b.push((macros[token.value] & 255) | 0);
+                                        return b;
+                                    }
+                                    
+                                } else {
+                                    throw 'Invalid addressing';
+                                }
+                            }
                         } else {
                             throw 'Can\'t resolve byte of type ' + token.type;
                         }
@@ -821,7 +857,7 @@
                                         var b = resolveByte(args[i], seq.opCode);
                                         if (b != null) {
                                             if (b instanceof Array) {
-                                                if (seq.mode == 'AB' || seq.mode == 'IND' || seq.mode == 'ABX' || seq.mode == 'ABY') {
+                                                if (seq.mode == 'AB' || seq.mode == 'IND' || seq.mode == 'ABX' || seq.mode == 'ABY' || args[i].type == 'immediate_label') {
                                                     objectCode.push(b.pop());
                                                     objectCode.push(b.pop());
                                                 } else {
