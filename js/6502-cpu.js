@@ -251,7 +251,7 @@
             SR = SR & 0xFF;
         },
         LSR = function (m) {
-            clearBit(SR, N);
+            SR = clearBit(SR, N);
             SR = getBit(m & 0xFF, 0) ? setBit(SR, C) : clearBit(SR, C);
             tmp = (m >> 1) & 0x7F;
             SR = tmp == 0 ? setBit(SR, Z) : clearBit(SR, Z);
@@ -537,19 +537,19 @@
             },
             // CLC IMP
             0x18: function () {
-                clearBit(SR, C);
+                SR = clearBit(SR, C);
             },
             // CLD IMP
             0xD8: function () {
-                clearBit(SR, D);
+                SR = clearBit(SR, D);
             },
             // CLI IMP
             0x58: function () {
-                clearBit(SR, I);
+                SR = clearBit(SR, I);
             },
             // CLV IMP
             0xB8: function () {
-                clearBit(SR, V);
+                SR = clearBit(SR, V);
             },
             // CMP IM
             0xC9: function () {
