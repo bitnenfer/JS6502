@@ -43,7 +43,7 @@
         PC = 0,
         // Stack pointer 8 bit
         SP = 0,
-        stackAddress = 0xF1FF,
+        stackAddress = 0x0100,
         // 64KB of RAM
         RAM = new Uint8Array(65536),
         // Cached 16 bit addr
@@ -720,8 +720,14 @@
             },
             // JMP ID
             0x6C: function () {
-                addrID();
-                JMP(mem.peek);
+                var b0 = eatByte(),
+                    b1 = eatByte(),
+                    a0 = (b1 << 8) | (b0 & 0xff);
+                
+                lsb = RAM[a0];
+                msb = RAM[a0 + 1];
+                addr = (msb << 8) | (lsb & 0xff);
+                JMP(addr);
             },
             // JSR AB
             0x20: function () {
