@@ -1,4 +1,4 @@
-# 6502.js
+# 6502 Assembler & Emulator written in JavaScript
 
 [Live Demo](http://damnbrain.com/dev/6502)
 
