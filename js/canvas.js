@@ -76,7 +76,7 @@
             
         ],
         textBuffer = [],
-        bufferAddress = 0x0100,
+        bufferAddress = 0xF100,
         textBufferAddress = 0x0600,
         slice = Array.prototype.slice,
         onWindowLoad = function (e) {

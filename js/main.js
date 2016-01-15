@@ -511,7 +511,7 @@
             var w = window.open('', '', 'width=400,height=150');
             w.document.write('<div style="font-family:Verdana;font-size:12px;"><b><u>Specs:</u></b><br>' +
                 '- 64 KB of memory.<br>' +
-                '- Screen memory starts at $0100 and ends at $04FF.<br>' +
+                '- Screen memory starts at $F100 and ends at $F4FF.<br>' +
                 '- Text memory starts at $0600 and ends at $09FF.<br>' +
                 '- Background color is defined at address $E400.<br>' +
                 '- Text color is defined at address $E401.<br>' +
