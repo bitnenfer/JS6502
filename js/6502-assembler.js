@@ -78,7 +78,7 @@
             LDA: [0xa9, 0xa5, 0xb5, null, 0xad, 0xbd, 0xb9, null, 0xa1, 0xb1, null, null, null],
             LDX: [0xa2, 0xa6, null, 0xb6, 0xae, null, 0xbe, null, null, null, null, null, null],
             LDY: [0xa0, 0xa4, 0xb4, null, 0xac, 0xbc, null, null, null, null, null, null, null],
-            LSR: [null, 0x46, 0x56, null, 0x4e, 0x5e, null, null, null, null, 0x4a, null, null],
+            LSR: [null, 0x46, 0x56, null, 0x4e, 0x5e, null, null, null, null, null, null, 0x4a],
             NOP: [null, null, null, null, null, null, null, null, null, null, 0xea, null, null],
             ORA: [0x09, 0x05, 0x15, null, 0x0d, 0x1d, 0x19, null, 0x01, 0x11, null, null, null],
             TAX: [null, null, null, null, null, null, null, null, null, null, 0xaa, null, null],
