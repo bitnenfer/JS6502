@@ -586,6 +586,7 @@
 
         function displayContents(contents) {
             codeTag.value = contents;
+            assembleSourceCode();
         }
 
         document.getElementById('file-input')
