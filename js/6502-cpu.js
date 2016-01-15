@@ -306,12 +306,12 @@
             PC = (popStack() << 8 | tmp);*/
             lsb = popStack();
             msb = popStack();
-            PC = ((msb << 8 | lsb) + 1) & 0xFF;
+            PC = ((msb << 8 | lsb) + 1) & 0xFFFF;
         },
         RTS = function () {
             lsb = popStack();
             msb = popStack();
-            PC = ((msb << 8 | lsb) + 1) & 0xFF;
+            PC = ((msb << 8 | lsb) + 1) & 0xFFFF;
         },
         SBC = function (m) {
             //TODO: Implement Decimal mode.
