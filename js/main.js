@@ -553,7 +553,7 @@
         assembleSourceCode();
         breakpoint.value = dec16ToHex(parseInt(breakpoint.value));
         window.addEventListener('keydown', function (e) {
-            if(e.keyCode == 83 && (navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey) ) {
+            if (e.keyCode == 83 && (navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey)) {
                 onButtonAssemble();
                 e.preventDefault();
                 return false;
@@ -571,5 +571,24 @@
             allowHotkeys = true;
         });
 
+        function readSingleFile(e) {
+            var file = e.target.files[0];
+            if (!file) {
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function (e) {
+                var contents = e.target.result;
+                displayContents(contents);
+            };
+            reader.readAsText(file);
+        }
+
+        function displayContents(contents) {
+            codeTag.value = contents;
+        }
+
+        document.getElementById('file-input')
+            .addEventListener('change', readSingleFile, false);
     });
 }(window));
