@@ -161,12 +161,10 @@
             clearBackground();
             bufferContext.imageSmoothingEnabled = false;
             bufferContext.mozImageSmoothingEnabled = false;
-            bufferContext.webkitImageSmoothingEnabled = false;
             copyBufferToCanvas();
             copyTextBufferToCanvas();
             context.imageSmoothingEnabled = false;
             context.mozImageSmoothingEnabled = false;
-            context.webkitImageSmoothingEnabled = false;
             context.save();
             context.scale(10, 10);
             context.drawImage(buffer, 0, 0);

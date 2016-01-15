@@ -90,6 +90,7 @@ HELLO:
 					Instruction: <input title="$00" id='instr' class="input-text" type="text" disabled></input>
 					Address: $<input id="mem-from" class="input-text" type="text" value="0000" />
 					Count: <input id="mem-count" class="input-text" type="text" value="256" onkeypress="return event.charCode >= 48 && event.charCode <= 57"/>
+					Breakpoint: $<input id="breakpoint" class="input-text" type="text" value="65535" />
 				</div>
 				<div id="debug-container">
 					<pre id="register-output"></pre>
@@ -98,6 +99,7 @@ HELLO:
 				<!-- Debug End-->
 				<!-- Object Code Dump Start -->
 				<div id="objcode-dump">
+					<br>
 					<div style="text-align: left; margin-left:120px;">Object Code<br>Size:<div id='size'>0 BYTES</div></input>
 					<pre id="object-output"></pre>
 				</div>

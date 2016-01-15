@@ -51,6 +51,7 @@
         lsb,
         msb,
         tmp,
+        breakpoint = RAM.length - 1,
         getBit = function (value, bitpos) {
             return (value >> bitpos) & 1;
         },
@@ -63,6 +64,11 @@
             return value;
         },
         eatByte = function () {
+            if (PC == breakpoint)
+            {
+                alert("Breakpoint at address $" + dec16ToHex(breakpoint));
+                shouldPause = true;
+            }
             return RAM[PC++];
         },
         // Address modes
@@ -109,10 +115,12 @@
         },
         // Branch Relative
         brchREL = function () {
-            var l = PC & 255 | 0,
-                h = PC / 256 | 0,
-                b = eatByte() & 0xFF;
-            PC = (((h << 8 | l) + b + 1) & 0xFF);
+            var offset = eatByte();
+            if (offset > 0x7f) {
+                PC = (PC - (0x100 - offset));
+            } else {
+                PC = (PC + offset);
+            }
         },
         pushStack = function (m) {
             RAM[stackAddress + SP] = m;
@@ -969,32 +977,32 @@
             },
             // SBC ZPX
             0xF5: function () {
-                addrZP();
+                addrZPX();
                 SBC(mem.peek);
             },
             // SBC AB
             0xED: function () {
-                addrZP();
+                addrAB();
                 SBC(mem.peek);
             },
             // SBC ABX
             0xFD: function () {
-                addrZP();
+                addrABX();
                 SBC(mem.peek);
             },
             // SBC ABY
             0xF9: function () {
-                addrZP();
+                addrABY();
                 SBC(mem.peek);
             },
             // SBC IDX
             0xE1: function () {
-                addrZP();
+                addrIDX();
                 SBC(mem.peek);
             },
             // SBC IDY
             0xF1: function () {
-                addrZP();
+                addrIDY();
                 SBC(mem.peek);
             },
             // SEC
@@ -1237,10 +1245,17 @@
     });
     Object.defineProperty(CPU6502, 'run', {
         writable: false,
-        value: function () {
+        value: function (bpaddress) {
+            breakpoint = parseInt(bpaddress, 16) & 0xFFF;
             shouldStop = false;
             shouldPause = false;
             executeWithTimer();
+        }
+    });
+    Object.defineProperty(CPU6502, 'setBreakpoint', {
+        writable: false,
+        value: function(bpaddress) {
+            breakpoint = parseInt(bpaddress, 16) & 0xFFF;
         }
     });
     Object.defineProperty(CPU6502, 'step', {

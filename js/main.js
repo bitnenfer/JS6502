@@ -49,6 +49,7 @@
         lastMessage,
         lastColor,
         allowHotkeys = false,
+        breakpoint,
         mnemonics = {
             // ADC IM
             0x69: 'ADC',
@@ -401,7 +402,7 @@
             try {
                 errorOutputTag.innerHTML = 'Running program';
                 errorOutputTag.style.color = '#00AA11';
-                CPU6502.run();
+                CPU6502.run(breakpoint.value);
             } catch (e) {
                 errorOutputTag.innerHTML = 'EMU ERROR: ' + e;
                 errorOutputTag.style.color = '#ff0000';
@@ -414,6 +415,10 @@
         dec8ToHex = function (dec) {
             var h = dec.toString(16);
             return ('00'.substr(0, 2 - h.length) + h).toUpperCase();
+        },
+        dec16ToHex = function (dec) {
+            var h = dec.toString(16);
+            return ('0000'.substr(0, 4 - h.length) + h).toUpperCase();
         },
         updateRegisterData = function () {
             setTimeout(updateRegisterData, 16);
@@ -538,6 +543,7 @@
         btnPause = document.getElementById('btn-pause');
         btnStep = document.getElementById('btn-step');
         instrInput = document.getElementById('instr');
+        breakpoint = document.getElementById('breakpoint');
         btnRun.disabled = false;
         btnDump.disabled = false;
         btnDebug.checked = true;
@@ -545,6 +551,7 @@
         setEventHandlers();
         restoreSourceCode();
         assembleSourceCode();
+        breakpoint.value = dec16ToHex(parseInt(breakpoint.value));
         window.addEventListener('keydown', function (e) {
             if(e.keyCode == 83 && (navigator.platform.match("Mac") ? e.metaKey : e.ctrlKey) ) {
                 onButtonAssemble();
