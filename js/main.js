@@ -585,12 +585,10 @@
         }
 
         function displayContents(contents) {
-            CPU6502.stop();
-            CPU6502.reset();
+            onButtonStop(null);
+            onButtonReset(null);            
             codeTag.value = contents;
-            CPU6502.burn(objectCode, 0x0000);
-            CPU6502.setByte(0x0600, 0x9B);
-            CPU6502.setByte(0xE401, 1);
+            onButtonAssemble(null);
             document.getElementById('file-input').value = "";
         }
 
