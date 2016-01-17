@@ -392,7 +392,7 @@
             CPU6502.burn(objectCode, 0x0000);
            // CPU6502.setByte(0x0600, 0x9B);
             CPU6502.setByte(0xE401, 1);
-            memFromInput.value = dec16ToHex(CPU6502.getCurrentPC());
+           // memFromInput.value = dec16ToHex(CPU6502.getCurrentPC());
         },
         onButtonStop = function (e) {
             CPU6502.stop();
