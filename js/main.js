@@ -390,12 +390,13 @@
         onButtonAssemble = function (e) {
             assembleSourceCode();
             CPU6502.burn(objectCode, 0x0000);
-            CPU6502.setByte(0x0600, 0x9B);
+           // CPU6502.setByte(0x0600, 0x9B);
             CPU6502.setByte(0xE401, 1);
+            memFromInput.value = dec16ToHex(CPU6502.getCurrentPC());
         },
         onButtonStop = function (e) {
             CPU6502.stop();
-            CPU6502.setByte(0x0600, 0x9B);
+            //CPU6502.setByte(0x0600, 0x9B);
             CPU6502.setByte(0xE401, 1);
         },
         onButtonRun = function (e) {
@@ -489,6 +490,7 @@
             checkMemoryLimits();
         },
         onBtnDump = function (e) {
+            console.log(objectCode);
             objOutput.innerHTML = ASM6502.dumpObjectCodeToHex(objectCode[0]);
             document.getElementById('size').innerHTML = objectCode[0].length + ' BYTES';
         },
@@ -517,7 +519,6 @@
             w.document.write('<div style="font-family:Verdana;font-size:12px;"><b><u>Specs:</u></b><br>' +
                 '- 64 KB of memory.<br>' +
                 '- Screen memory starts at $F100 and ends at $F4FF.<br>' +
-                '- Text memory starts at $0600 and ends at $09FF.<br>' +
                 '- Background color is defined at address $E400.<br>' +
                 '- Text color is defined at address $E401.<br>' +
                 '- Color values go from $0 to $F.<br>' +

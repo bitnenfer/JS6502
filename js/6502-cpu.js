@@ -1168,7 +1168,7 @@
                 }
                 RAM[offset + (count++)] = src[0][index];                
             }
-            PC = src[1][0][1];
+            PC = src[1][src.length - 1][1];
         },
         registerDumpData = '',
         CPU6502 = {},
@@ -1188,6 +1188,12 @@
     });
     // Expose some elements for communication
     // between other modules.
+    Object.defineProperty(CPU6502, 'getCurrentPC', {
+        writable: false,
+        value: function () {
+            return PC;
+        }
+    });
     Object.defineProperty(CPU6502, 'getByte', {
         writable: false,
         value: function (address) {

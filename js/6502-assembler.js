@@ -722,6 +722,9 @@
                     objectCode = [],
                     macros = {},
                     origins = [],
+                    currentOriginHigh = 0,
+                    currentOriginLow = 0,
+                    currentOrigin = 0,
                     eof = function (step) {
                         return (index + step >= sequence.length);
                     },
@@ -862,8 +865,8 @@
                                         if (b != null) {
                                             if (b instanceof Array) {
                                                 if (seq.mode == 'AB' || seq.mode == 'IND' || seq.mode == 'ABX' || seq.mode == 'ABY' || args[i].type == 'immediate_label') {
-                                                    objectCode.push(b.pop());
-                                                    objectCode.push(b.pop());
+                                                    objectCode.push(currentOriginLow + b.pop());
+                                                    objectCode.push(currentOriginHigh + b.pop());
                                                 } else {
                                                     throw 'Invalid bit size in argument of ' + seq.opCode + ' at $' + dec8ToHex(addr) + ' with mode ' + seq.mode;
                                                 }
@@ -892,9 +895,24 @@
                                     throw 'Not enough arguments for directive.';
                                 }
                             } else if (seq.type == 'originset') {
-                                throw 'No pointer setting supported.';
-                                //console.log(seq);
-                                //origins.push([objectCode.length, seq.args[0].value]);
+                                var value = seq.args[0].value; 
+                                if (origins.length > 0) {
+                                    if (value > currentOrigin) {
+                                        for (var i = currentOrigin; i < value; ++i) {
+                                            objectCode.push(0);
+                                        }
+                                    } else if (value < currentOrigin) {
+                                        var temp = [];
+                                        for (var i = value; i < currentOrigin; ++i) {
+                                            temp.push(0);
+                                        }
+                                        objectCode = temp.concat(objectCode);
+                                    }
+                                }
+                                currentOrigin = value;
+                                currentOriginHigh = ((currentOrigin / 256) | 0)
+                                currentOriginLow = ((currentOrigin & 255) | 0);
+                                origins.push([objectCode.length, seq.args[0].value]);
                             } else if (seq.type != 'labeling' && seq.type != 'macro_def' && seq.type != 'originset') {
                                 throw 'Invalid sequence of type ' + seq.type;
                             }

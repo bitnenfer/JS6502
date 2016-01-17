@@ -162,7 +162,7 @@
             bufferContext.imageSmoothingEnabled = false;
             bufferContext.mozImageSmoothingEnabled = false;
             copyBufferToCanvas();
-            copyTextBufferToCanvas();
+            //copyTextBufferToCanvas();
             context.imageSmoothingEnabled = false;
             context.mozImageSmoothingEnabled = false;
             context.save();
