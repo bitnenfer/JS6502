@@ -1168,7 +1168,7 @@
                 }
                 RAM[offset + (count++)] = src[0][index];                
             }
-            PC = src[1][src.length - 1][1];
+            PC = src[1][src[1].length - 1][1];
         },
         registerDumpData = '',
         CPU6502 = {},
