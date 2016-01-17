@@ -1160,13 +1160,17 @@
                 len = src[0].length,
                 offset = 0,
                 currentMemPos = 0,
-                count = 0;
+                count = 0,
+                cbyte = 0,
+                finaloffset = 0;
             for (index = 0; index < len; ++index) {
                 if (currentMemPos < src[1].length && index >= src[1][currentMemPos][0]) {
                     offset = src[1][currentMemPos++][1];
                     count = 0;
                 }
-                RAM[offset + (count++)] = src[0][index];                
+                finaloffset = offset + (count++);
+                cbyte = src[0][index];
+                RAM[finaloffset] = cbyte;                
             }
             PC = src[1][src[1].length - 1][1];
         },

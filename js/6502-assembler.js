@@ -621,6 +621,7 @@
                         throw 'Invalid address mode ' + mode;
                     },
                     parse = function () {
+                        var lastoriginset = null;
                         if (tokenStream instanceof Array) {
                             while (!eof(0) && peek(0) != null) {
                                 var token = peek(0);
@@ -693,7 +694,15 @@
                                         } else {
                                             throw 'Incorrect type of address.';
                                         }
-                                        sequence.push(seq);
+                                        if (lastoriginset != null) {
+                                            if (seq.args[0].value != lastoriginset.args[0].value) {
+                                                sequence.push(seq);
+                                                lastoriginset = seq;
+                                            }
+                                        } else {
+                                            sequence.push(seq);
+                                            lastoriginset = seq;
+                                        }
                                     } else {
                                         throw 'Missing assignment of start address.';
                                     }
@@ -722,9 +731,9 @@
                     objectCode = [],
                     macros = {},
                     origins = [],
-                    currentOriginHigh = 0,
-                    currentOriginLow = 0,
                     currentOrigin = 0,
+                    currentOriginLow = 0,
+                    currentOriginHigh = 0,
                     eof = function (step) {
                         return (index + step >= sequence.length);
                     },
@@ -764,6 +773,9 @@
                             addr = 0,
                             oc;
                         for (idx = 0; idx < sequence.length; ++idx) {
+                            if (sequence[idx].type == 'originset') {
+                                continue;
+                            }
                             if (sequence[idx].type == 'macro_def') {
                                 macros[sequence[idx].macroName] = sequence[idx].args[0].value;
                                 continue;
@@ -831,7 +843,7 @@
                                         b.push((macros[token.value] & 255) | 0);
                                         return b;
                                     }
-                                    
+
                                 } else {
                                     throw 'Invalid addressing';
                                 }
@@ -853,6 +865,8 @@
                         }
                     },
                     gen = function () {
+                        var lastseq = null,
+                            lastoriginset = null;
                         while (!eof(0) && peek(0) != null) {
                             var seq = peek(0);
                             if (seq.type == 'op') {
@@ -865,8 +879,13 @@
                                         if (b != null) {
                                             if (b instanceof Array) {
                                                 if (seq.mode == 'AB' || seq.mode == 'IND' || seq.mode == 'ABX' || seq.mode == 'ABY' || args[i].type == 'immediate_label') {
-                                                    objectCode.push(currentOriginLow + b.pop());
-                                                    objectCode.push(currentOriginHigh + b.pop());
+                                                    if (seq.opCode == 'JSR' || seq.opCode == 'JMP') {
+                                                        objectCode.push(currentOriginLow + b.pop());
+                                                        objectCode.push(currentOriginHigh + b.pop());
+                                                    } else {
+                                                        objectCode.push(b.pop());
+                                                        objectCode.push(b.pop());
+                                                    }
                                                 } else {
                                                     throw 'Invalid bit size in argument of ' + seq.opCode + ' at $' + dec8ToHex(addr) + ' with mode ' + seq.mode;
                                                 }
@@ -895,27 +914,49 @@
                                     throw 'Not enough arguments for directive.';
                                 }
                             } else if (seq.type == 'originset') {
-                                var value = seq.args[0].value; 
-                                if (origins.length > 0) {
-                                    if (value > currentOrigin) {
-                                        for (var i = currentOrigin; i < value; ++i) {
-                                            objectCode.push(0);
-                                        }
-                                    } else if (value < currentOrigin) {
-                                        var temp = [];
-                                        for (var i = value; i < currentOrigin; ++i) {
-                                            temp.push(0);
-                                        }
-                                        objectCode = temp.concat(objectCode);
+                                var value = seq.args[0].value;
+                                var add = true;
+                                var replace = false;
+                                if (lastseq != null && lastseq.type != 'originset') {
+                                    if (lastseq.args[0].value == value) {
+                                        add = false;
                                     }
                                 }
-                                currentOrigin = value;
-                                currentOriginHigh = ((currentOrigin / 256) | 0)
+                                if (lastseq != null && lastseq.type == 'originset') {
+                                    replace = true;
+                                }
+                                if (add) {
+                                    if (origins.length > 0 && !replace) {
+                                        if (value > currentOrigin) {
+                                            for (var i = currentOrigin; i < value; ++i) {
+                                                objectCode.push(0);
+                                            }
+                                            currentOrigin = value;
+                                            origins.push([objectCode.length, currentOrigin]);
+                                        } else {
+                                            var temp = [];
+                                            for (var i = value; i < currentOrigin; ++i) {
+                                                temp.push(0);
+                                            }
+                                            objectCode = temp.concat(objectCode);
+                                            currentOrigin = value;
+                                            origins.push([objectCode.length, currentOrigin]);
+                                        }
+                                    } else {
+                                        if (replace) {
+                                            origins[origins.length - 1] = [objectCode.length, value];
+                                        } else {
+                                            origins.push([objectCode.length, value]);
+                                        }
+                                        currentOrigin = value;
+                                    }
+                                }
+                                currentOriginHigh = ((currentOrigin / 256) | 0);
                                 currentOriginLow = ((currentOrigin & 255) | 0);
-                                origins.push([objectCode.length, seq.args[0].value]);
                             } else if (seq.type != 'labeling' && seq.type != 'macro_def' && seq.type != 'originset') {
                                 throw 'Invalid sequence of type ' + seq.type;
                             }
+                            lastseq = seq;
                             ++index;
                         }
                     };
@@ -972,6 +1013,7 @@
         tokens = lexer.getTokens();
         parser = Parser(tokens);
         sequence = parser.getSequence();
+        console.log(sequence);
         generator = OCGen(sequence);
         objectCode = generator.getObjectCode();
         return objectCode;
