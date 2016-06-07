@@ -44,29 +44,18 @@
 				<canvas id="canvas" width="320" height="320" tabindex=1></canvas>
 				<textarea id="source" class="source-code" spellcheck='false' autofocus>
 ;THIS IS A SIMPLE HELLO WORLD
-;IT ALSO PLOTS PIXELS IN SCREEN
+;IT PLOTS PIXELS IN SCREEN
 
-TXTCLR 	= $E401
-TXTADDR = $0600
-PXLADDR = $01C0
+PXLADDR = $F100
 
-	LDA #$03
-	STA TXTCLR
-	LDA HELLO
-	
 PRINTF:
+	TXA
 	STA PXLADDR, X
-	STA TXTADDR, X
 	INX
-	LDA HELLO, X
-	CMP #$00
+	CPX #$FF
 	BNE PRINTF
 	BRK
-HELLO:
-	.BYTE "HELLO 6502!", $0D, 
-	"I AM PRINTING IN",$0D, 
-	"THE SCREEN",
-	$00, $9B
+				
 				</textarea>
 			</div>
 			<!-- Editor Start -->
