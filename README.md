@@ -1,9 +1,9 @@
 # 6502 Assembler & Emulator written in JavaScript
 
-[Live Demo](http://damnbrain.com/dev/6502)
+[Live Demo](https://raw.githack.com/bitnenfer/JS6502/gh-pages/index.html)
 
 6502 Emulator and Assembler written in JavaScript 
-by [Felipe Alfonso](http://twitter.com/pixelstab).
+by [Felipe Alfonso](http://twitter.com/bitnenfer).
 
 About the Emulator
 -------------------
